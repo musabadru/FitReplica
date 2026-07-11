@@ -1,0 +1,41 @@
+pluginManagement {
+    includeBuild("build-logic")
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "FitReplica"
+
+include(":app")
+
+include(":core:model")
+include(":core:common")
+include(":core:database")
+include(":core:datastore")
+include(":core:datastore-proto")
+include(":core:domain")
+include(":core:designsystem")
+
+include(":feature:closet")
+include(":feature:outfit")
+include(":feature:history")
+include(":feature:laundry")
+include(":feature:analytics")
+
+include(":avatar:api")
+
+include(":metadata:api")
+include(":metadata:impl-noop")

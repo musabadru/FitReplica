@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option java_package = "com.fitreplica.core.datastore";
+option java_multiple_files = true;
+
+enum ThemeMode {
+  THEME_MODE_UNSPECIFIED = 0;
+  SYSTEM = 1;
+  LIGHT = 2;
+  DARK = 3;
+}
+
+message AvatarConfigProto {
+  float height_cm = 1;
+  float chest_bust_cm = 2;
+  float waist_cm = 3;
+  float hip_cm = 4;
+  bool animation_enabled = 5;
+}
+
+message UserPreferences {
+  ThemeMode theme_mode = 1;
+  bool animations_enabled = 2;
+  bool avatar_module_enabled = 3;
+  bool metadata_module_enabled = 4;
+  AvatarConfigProto avatar_config = 5;
+}

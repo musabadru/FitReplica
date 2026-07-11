@@ -1,0 +1,57 @@
+# Gradle
+.gradle/
+/build/
+/*/build/
+/*/*/build/
+/*/*/*/build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+!gradle-wrapper.properties
+
+# Local configuration (per-machine, never shared)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+bin/
+gen/
+out/
+release/
+
+# Kotlin
+.kotlin/
+
+# Room schema exports are intentionally tracked (committed to git for migration
+# safety, per architecture doc §3.1) — do not ignore core/database/schemas/
+
+# Keystore files — never commit signing keys
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Log/temp
+*.log
+/build-logic/build/
+
+# Claude Code — per-machine local permission overrides, never shared
+.claude/settings.local.json
+
+# Raw third-party skill source archives (curated copies live in .claude/skills/)
+.skills/

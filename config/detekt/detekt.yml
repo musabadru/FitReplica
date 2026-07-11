@@ -1,0 +1,13 @@
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ["Composable"]
+
+complexity:
+  TooManyFunctions:
+    thresholdInClasses: 20
+
+style:
+  MagicNumber:
+    # Hex color literals (Color(0xFF6750A4)) aren't meaningfully refactorable
+    # into named constants — the literal *is* the named constant.
+    excludes: ["**/theme/Color.kt"]
