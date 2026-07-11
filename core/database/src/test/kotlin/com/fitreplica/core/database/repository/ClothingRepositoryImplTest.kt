@@ -60,6 +60,19 @@ class ClothingRepositoryImplTest {
             assertEquals(listOf(ClothingId("item-1")), results.map { it.id })
         }
 
+    @Test
+    fun `hyphenated search terms stay separate tokens instead of merging`() =
+        runTest {
+            repository.addItem(sampleItem())
+
+            // "nike-jacket" must become "nike* jacket*", not "nikejacket*" — the FTS4
+            // tokenizer already indexed "Nike" and "Jacket" as separate tokens, so a
+            // merged term would never match either one.
+            val results = repository.observeItems(ClosetFilter(searchQuery = "nike-jacket")).first()
+
+            assertEquals(listOf(ClothingId("item-1")), results.map { it.id })
+        }
+
     private fun sampleItem() =
         ClothingItem(
             id = ClothingId("item-1"),

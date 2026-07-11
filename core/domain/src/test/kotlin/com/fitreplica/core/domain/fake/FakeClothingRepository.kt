@@ -53,9 +53,17 @@ private fun ClothingItem.matches(filter: ClosetFilter): Boolean {
     return matchesStructuredFields && matchesSearchQuery(filter.searchQuery)
 }
 
+// Mirrors ClothingRepositoryImpl.toFtsQuery's tokenization: punctuation is a term
+// separator (not just whitespace), and each query term must be a *prefix* of some
+// haystack token — a substring check would accept "lu" matching inside "blue" (a false
+// positive FTS4's prefix MATCH would reject) and reject "nike*" (a false negative, since
+// the real query strips the `*` before searching).
 private fun ClothingItem.matchesSearchQuery(query: String?): Boolean {
     if (query.isNullOrBlank()) return true
-    val haystack = listOfNotNull(name, brand, type.name, colorPrimary).joinToString(" ").lowercase()
-    val terms = query.trim().lowercase().split(Regex("\\s+"))
-    return terms.all { term -> term.isBlank() || term in haystack }
+    val haystackTokens = tokensOf(listOfNotNull(name, brand, type.name, colorPrimary).joinToString(" "))
+    val queryTerms = tokensOf(query)
+    return queryTerms.isEmpty() || queryTerms.all { term -> haystackTokens.any { it.startsWith(term) } }
 }
+
+private fun tokensOf(text: String): List<String> =
+    text.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotBlank() }

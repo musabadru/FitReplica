@@ -78,15 +78,17 @@ class ClothingRepositoryImpl
 
 // "blue nike jacket" -> "blue* nike* jacket*": each term becomes an FTS4 prefix match
 // so partial words find results, matching the free-text search behaviour from §3.1.
-// FTS4 special characters (*, ", (, ), :, -, etc.) are stripped from each term first —
-// left unescaped, a term like `nike*` or `"blue jacket"` produces a malformed MATCH
-// expression that throws SQLiteException at query time. Terms that strip to nothing
-// (e.g. a search of just "***") are dropped; if every term does, the caller falls
-// back to the non-search filtered query instead of running an empty MATCH.
+// Splits on any run of non-alphanumeric characters rather than just whitespace, so
+// punctuation acts as a term separator instead of being deleted in place — "blue-jacket"
+// must become "blue* jacket*", not "bluejacket*", since FTS4's default tokenizer indexed
+// "blue" and "jacket" as separate tokens in the first place. This also keeps FTS4 syntax
+// characters (*, ", (, ), :, etc.) out of the MATCH expression — left unescaped, a term
+// like `nike*` or `"blue jacket"` produces a malformed expression that throws
+// SQLiteException at query time. Terms that split to nothing (e.g. a search of just
+// "***") are dropped; if every term does, the caller falls back to the non-search
+// filtered query instead of running an empty MATCH.
 private fun String.toFtsQuery(): String =
-    trim()
-        .split(Regex("\\s+"))
-        .map { term -> term.filter { it.isLetterOrDigit() } }
+    split(Regex("[^\\p{L}\\p{N}]+"))
         .filter { it.isNotBlank() }
         .joinToString(separator = " ") { term -> "$term*" }
 
