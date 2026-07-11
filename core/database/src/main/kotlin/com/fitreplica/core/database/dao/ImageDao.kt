@@ -29,7 +29,7 @@ abstract class ImageDao {
         imageId: String,
     ) {
         clearPrimaryForItem(itemId)
-        markPrimary(imageId)
+        markPrimary(itemId, imageId)
     }
 
     @Insert
@@ -38,8 +38,14 @@ abstract class ImageDao {
     @Query("UPDATE images SET isPrimary = 0 WHERE itemId = :itemId AND isPrimary = 1")
     protected abstract suspend fun clearPrimaryForItem(itemId: ClothingId)
 
-    @Query("UPDATE images SET isPrimary = 1 WHERE id = :imageId")
-    protected abstract suspend fun markPrimary(imageId: String)
+    // itemId is part of the predicate, not just clearPrimaryForItem's scope — without it,
+    // a caller passing a mismatched itemId/imageId pair (imageId belongs to a different
+    // item) would still mark that other item's image primary after clearing this item's.
+    @Query("UPDATE images SET isPrimary = 1 WHERE id = :imageId AND itemId = :itemId")
+    protected abstract suspend fun markPrimary(
+        itemId: ClothingId,
+        imageId: String,
+    )
 
     @Query("SELECT * FROM images WHERE itemId = :itemId ORDER BY takenAt ASC")
     abstract fun observeImagesForItem(itemId: ClothingId): Flow<List<ImageEntity>>

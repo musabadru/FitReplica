@@ -81,6 +81,51 @@ class ImageDaoTest {
             assertEquals(listOf("image-2"), primaryImages.map { it.id })
         }
 
+    @Test
+    fun `setPrimaryImage ignores an imageId that belongs to a different item`() =
+        runTest {
+            val otherItemId = ClothingId("item-2")
+            database.clothingDao().insertItem(
+                ClothingItemEntity(
+                    id = otherItemId,
+                    name = "Shirt",
+                    type = ClothingType.TOP,
+                    brand = null,
+                    colorPrimary = "white",
+                    colorSecondary = null,
+                    condition = Condition.NEW,
+                    status = Status.CLEAN,
+                    timesWorn = 0,
+                    lastWornAt = null,
+                    addedAt = 0L,
+                    size = null,
+                ),
+            )
+            dao.insertImage(image(id = "image-1", isPrimary = true))
+            dao.insertImage(
+                ImageEntity(
+                    id = "other-image",
+                    itemId = otherItemId,
+                    uri = "content://photo/other-image",
+                    thumbnailUri = "content://thumb/other-image",
+                    isPrimary = false,
+                    takenAt = 0L,
+                ),
+            )
+
+            // itemId/imageId mismatch: "other-image" belongs to otherItemId, not itemId.
+            dao.setPrimaryImage(itemId, "other-image")
+
+            assertEquals(
+                emptyList<String>(),
+                dao.observeImagesForItem(itemId).first().filter { it.isPrimary }.map { it.id },
+            )
+            assertEquals(
+                emptyList<String>(),
+                dao.observeImagesForItem(otherItemId).first().filter { it.isPrimary }.map { it.id },
+            )
+        }
+
     private fun image(
         id: String,
         isPrimary: Boolean,
