@@ -1,21 +1,70 @@
+import java.util.Properties
+
 plugins {
     id("fitreplica.android.application")
     id("fitreplica.android.application.compose")
     id("fitreplica.android.hilt")
 }
 
+val versionProps =
+    Properties().apply {
+        load(rootProject.file("version.properties").inputStream())
+    }
+// VERSION_NAME carries a trailing "# x-release-please-version" marker (release-please's generic
+// updater requires the marker on the same line as the value it rewrites), so only the leading
+// semver token is the real version — java.util.Properties has no mid-line comment syntax to strip it.
+val versionNameProperty =
+    versionProps.getProperty("VERSION_NAME")
+        ?: error("version.properties is missing VERSION_NAME")
+val releaseVersionName =
+    Regex("""\d+\.\d+\.\d+""").find(versionNameProperty)?.value
+        ?: error("version.properties VERSION_NAME must contain a semantic version")
+val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toInt() }
+require(
+    verMinor in 0..999 &&
+        verPatch in 0..999 &&
+        verMajor.toLong() * 1_000_000 + verMinor * 1_000L + verPatch <= Int.MAX_VALUE,
+) {
+    "versionCode must fit in an Int with minor/patch under 1000: $releaseVersionName"
+}
+// Wide packing (minor/patch capped at 3 digits each) so e.g. 0.1.100 and 0.2.0 can't collide.
+val releaseVersionCode = verMajor * 1_000_000 + verMinor * 1_000 + verPatch
+
+val localProperties =
+    Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            load(localPropertiesFile.inputStream())
+        }
+    }
+
+fun signingProperty(key: String): String? = localProperties.getProperty(key) ?: System.getenv(key)
+val releaseStoreFile = signingProperty("RELEASE_STORE_FILE")
+
 android {
     namespace = "com.fitreplica.app"
 
     defaultConfig {
         applicationId = "com.fitreplica.app"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseStoreFile != null) {
+                storeFile = file(releaseStoreFile)
+                storePassword = signingProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = signingProperty("RELEASE_KEY_ALIAS")
+                keyPassword = signingProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = if (releaseStoreFile != null) signingConfigs.getByName("release") else null
         }
     }
 }
