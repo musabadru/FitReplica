@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "e2e14aac3796417ebc75db5224eee6b2",
+    "identityHash": "8b7596115dde5ec9d45d5658a99ccfd1",
     "entities": [
       {
         "tableName": "clothing_items",
@@ -240,7 +240,17 @@
             "id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_wear_events_itemId",
+            "unique": false,
+            "columnNames": [
+              "itemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_wear_events_itemId` ON `${TABLE_NAME}` (`itemId`)"
+          }
+        ],
         "foreignKeys": [
           {
             "table": "clothing_items",
@@ -259,7 +269,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e2e14aac3796417ebc75db5224eee6b2')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8b7596115dde5ec9d45d5658a99ccfd1')"
     ]
   }
 }

@@ -40,29 +40,29 @@ class Converters {
     fun fromClothingType(value: ClothingType?): String? = EnumTypeConverter.toStorage(value)
 
     @TypeConverter
-    fun toClothingType(value: String?): ClothingType? = EnumTypeConverter.toEnum(value)
+    fun toClothingType(value: String?): ClothingType? = EnumTypeConverter.toEnum<ClothingType>(value)
 
     @TypeConverter
     fun fromCondition(value: Condition?): String? = EnumTypeConverter.toStorage(value)
 
     @TypeConverter
-    fun toCondition(value: String?): Condition? = EnumTypeConverter.toEnum(value)
+    fun toCondition(value: String?): Condition? = EnumTypeConverter.toEnum<Condition>(value)
 
     @TypeConverter
     fun fromStatus(value: Status?): String? = EnumTypeConverter.toStorage(value)
 
     @TypeConverter
-    fun toStatus(value: String?): Status? = EnumTypeConverter.toEnum(value)
+    fun toStatus(value: String?): Status? = EnumTypeConverter.toEnum<Status>(value)
 
     @TypeConverter
     fun fromSizeSystem(value: SizeSystem?): String? = EnumTypeConverter.toStorage(value)
 
     @TypeConverter
-    fun toSizeSystem(value: String?): SizeSystem? = EnumTypeConverter.toEnum(value)
+    fun toSizeSystem(value: String?): SizeSystem? = EnumTypeConverter.toEnum<SizeSystem>(value)
 
     @TypeConverter
     fun fromSizeCategory(value: SizeCategory?): String? = EnumTypeConverter.toStorage(value)
 
     @TypeConverter
-    fun toSizeCategory(value: String?): SizeCategory? = EnumTypeConverter.toEnum(value)
+    fun toSizeCategory(value: String?): SizeCategory? = EnumTypeConverter.toEnum<SizeCategory>(value)
 }

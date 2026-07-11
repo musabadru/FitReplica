@@ -15,6 +15,7 @@ class AndroidRoomConventionPlugin : Plugin<Project> {
 
             extensions.configure<KspExtension> {
                 arg("room.schemaLocation", "$projectDir/schemas")
+                arg("room.generateKotlin", "true")
             }
 
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
