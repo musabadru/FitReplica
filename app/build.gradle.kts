@@ -20,8 +20,12 @@ val releaseVersionName =
     Regex("""\d+\.\d+\.\d+""").find(versionNameProperty)?.value
         ?: error("version.properties VERSION_NAME must contain a semantic version")
 val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toInt() }
-require(verMinor in 0..999 && verPatch in 0..999) {
-    "minor/patch must stay under 1000 to keep versionCode packing collision-free: $releaseVersionName"
+require(
+    verMinor in 0..999 &&
+        verPatch in 0..999 &&
+        verMajor.toLong() * 1_000_000 + verMinor * 1_000L + verPatch <= Int.MAX_VALUE
+) {
+    "versionCode must fit in an Int with minor/patch under 1000: $releaseVersionName"
 }
 // Wide packing (minor/patch capped at 3 digits each) so e.g. 0.1.100 and 0.2.0 can't collide.
 val releaseVersionCode = verMajor * 1_000_000 + verMinor * 1_000 + verPatch
