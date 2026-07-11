@@ -21,7 +21,7 @@ class UserPreferencesRepositoryImpl
                     avatarModuleEnabled = proto.avatarModuleEnabled,
                     metadataModuleEnabled = proto.metadataModuleEnabled,
                     animationsEnabled = proto.animationsEnabled,
-                    avatarConfig = proto.avatarConfig.toDomain(),
+                    avatarConfig = if (proto.hasAvatarConfig()) proto.avatarConfig.toDomain() else AvatarConfigData(),
                 )
             }
 
@@ -62,6 +62,9 @@ private fun ThemeMode.toProto(): com.fitreplica.core.datastore.ThemeMode =
         ThemeMode.DARK -> com.fitreplica.core.datastore.ThemeMode.DARK
     }
 
+// Only call when hasAvatarConfig() is true — the default proto instance's zero-values
+// (heightCm=0, animationEnabled=false) don't match AvatarConfigData's own defaults, so
+// an absent sub-message must map to AvatarConfigData() instead of going through this.
 private fun AvatarConfigProto.toDomain(): AvatarConfigData =
     AvatarConfigData(
         heightCm = heightCm,

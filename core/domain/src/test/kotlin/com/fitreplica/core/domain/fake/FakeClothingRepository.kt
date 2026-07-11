@@ -14,7 +14,9 @@ class FakeClothingRepository : ClothingRepository {
 
     val wearLog = mutableListOf<Triple<ClothingId, OutfitId?, String?>>()
 
-    override fun observeItems(filter: ClosetFilter) = items.map { it }
+    // Mirrors ClothingDao's structured-filter + FTS-prefix semantics closely enough that
+    // tests exercising ClosetFilter behave the same against the fake as the real DAO.
+    override fun observeItems(filter: ClosetFilter) = items.map { list -> list.filter { it.matches(filter) } }
 
     override fun observeItem(itemId: ClothingId) = items.map { list -> list.find { it.id == itemId } }
 
@@ -39,4 +41,21 @@ class FakeClothingRepository : ClothingRepository {
                 if (item.id == itemId) item.copy(condition = condition) else item
             }
     }
+}
+
+private fun ClothingItem.matches(filter: ClosetFilter): Boolean {
+    val matchesStructuredFields =
+        (filter.type == null || type == filter.type) &&
+            (filter.status == null || status == filter.status) &&
+            (filter.condition == null || condition == filter.condition) &&
+            (filter.brand == null || brand == filter.brand) &&
+            (filter.colorPrimary == null || colorPrimary == filter.colorPrimary)
+    return matchesStructuredFields && matchesSearchQuery(filter.searchQuery)
+}
+
+private fun ClothingItem.matchesSearchQuery(query: String?): Boolean {
+    if (query.isNullOrBlank()) return true
+    val haystack = listOfNotNull(name, brand, type.name, colorPrimary).joinToString(" ").lowercase()
+    val terms = query.trim().lowercase().split(Regex("\\s+"))
+    return terms.all { term -> term.isBlank() || term in haystack }
 }

@@ -25,6 +25,8 @@ data class ImageEntity(
     val itemId: ClothingId,
     val uri: String,
     val thumbnailUri: String,
+    // At most one row per itemId should have isPrimary = true. Enforced transactionally
+    // in ImageDao.insertImage/setPrimaryImage, not by a schema constraint — see ImageDao.
     val isPrimary: Boolean,
     val takenAt: Long,
 )
