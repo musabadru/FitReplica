@@ -6,20 +6,23 @@ plugins {
     id("fitreplica.android.hilt")
 }
 
-val versionProps = Properties().apply {
-    load(rootProject.file("version.properties").inputStream())
-}
+val versionProps =
+    Properties().apply {
+        load(rootProject.file("version.properties").inputStream())
+    }
 val releaseVersionName = versionProps.getProperty("VERSION_NAME")
 val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toInt() }
 // major/minor/patch packed so versionCode stays monotonic across ordinary semver bumps.
 val releaseVersionCode = verMajor * 10_000 + verMinor * 100 + verPatch
 
-val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        load(localPropertiesFile.inputStream())
+val localProperties =
+    Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            load(localPropertiesFile.inputStream())
+        }
     }
-}
+
 fun signingProperty(key: String): String? = localProperties.getProperty(key) ?: System.getenv(key)
 val releaseStoreFile = signingProperty("RELEASE_STORE_FILE")
 
