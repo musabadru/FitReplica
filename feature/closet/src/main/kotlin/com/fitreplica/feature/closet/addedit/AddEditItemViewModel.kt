@@ -1,5 +1,6 @@
 package com.fitreplica.feature.closet.addedit
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +16,7 @@ import com.fitreplica.core.model.SizeCategory
 import com.fitreplica.core.model.SizeSystem
 import com.fitreplica.feature.closet.ITEM_ID_ARG
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +26,14 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+// Distinct from PHOTO_SAVE_WARNING: this fires when adding a photo in edit mode fails
+// immediately (no save has just happened), whereas PHOTO_SAVE_WARNING fires only as part of
+// a completed item save in add mode — conflating the two wording-wise implied a save problem
+// when there wasn't one.
+private const val PHOTO_ADD_WARNING = "Couldn't save that photo (storage issue)."
 private const val PHOTO_SAVE_WARNING = "Item saved, but one or more photos couldn't be saved (storage issue)."
+private const val SAVE_ERROR = "Couldn't save this item. Try again."
+private const val TAG = "AddEditItemViewModel"
 
 @HiltViewModel
 class AddEditItemViewModel
@@ -37,9 +46,21 @@ class AddEditItemViewModel
         private val updateClothingItemUseCase: UpdateClothingItemUseCase,
     ) : ViewModel() {
         private val editingItemId: ClothingId? = savedStateHandle.get<String>(ITEM_ID_ARG)?.let { ClothingId(it) }
-        private var addedAt: Long = System.currentTimeMillis()
+
+        // Metadata this form doesn't expose fields for. Left null for new items (correct — a
+        // new item has no purchase history yet); populated from the loaded item in edit mode
+        // so editing a field this form _does_ own never silently wipes one it doesn't.
+        // addedAt in particular stays null until populateFrom sets it (edit mode) — computing
+        // it eagerly at construction time for add mode would timestamp when the form was
+        // *opened*, not when the user actually tapped Save.
+        private var addedAt: Long? = null
         private var timesWorn = 0
         private var lastWornAt: Long? = null
+        private var sku: String? = null
+        private var avatarSlot: String? = null
+        private var purchasePrice: Double? = null
+        private var purchaseDate: Long? = null
+        private var purchaseLocation: String? = null
 
         private val _uiState =
             MutableStateFlow(
@@ -68,6 +89,11 @@ class AddEditItemViewModel
             addedAt = item.addedAt
             timesWorn = item.timesWorn
             lastWornAt = item.lastWornAt
+            sku = item.sku
+            avatarSlot = item.avatarSlot
+            purchasePrice = item.purchasePrice
+            purchaseDate = item.purchaseDate
+            purchaseLocation = item.purchaseLocation
             _uiState.update {
                 it.copy(
                     name = item.name,
@@ -111,31 +137,47 @@ class AddEditItemViewModel
             }
         }
 
+        // Called by the screen once it has acted on isSaved (navigated away), so a
+        // configuration change afterwards doesn't re-trigger navigation: the ViewModel
+        // survives rotation, so a stale isSaved = true would otherwise still be there the
+        // next time the recreated screen's LaunchedEffect(uiState.isSaved) first runs.
+        fun consumeSaved() {
+            _uiState.update { it.copy(isSaved = false) }
+        }
+
         private fun onPhotoAdded(sourceUri: String) {
             val itemId = editingItemId
             if (itemId != null) {
                 viewModelScope.launch {
+                    // Cleared up front so a subsequent success dismisses a stale warning, and
+                    // a repeated identical failure still re-emits (StateFlow skips publishing
+                    // an unchanged value, so going through null first is required).
+                    _uiState.update { it.copy(saveWarning = null) }
                     val isFirstPhoto = _uiState.value.existingImages.isEmpty()
                     val result = imageRepository.addImage(itemId, sourceUri, isPrimary = isFirstPhoto)
                     if (result is Result.Error) {
-                        _uiState.update { it.copy(saveWarning = PHOTO_SAVE_WARNING) }
+                        _uiState.update { it.copy(saveWarning = PHOTO_ADD_WARNING) }
                     }
                 }
             } else {
                 _uiState.update { state ->
                     val isFirstPhoto = state.stagedPhotos.isEmpty()
-                    state.copy(stagedPhotos = state.stagedPhotos + StagedPhoto(sourceUri, isPrimary = isFirstPhoto))
+                    val staged =
+                        StagedPhoto(id = UUID.randomUUID().toString(), sourceUri = sourceUri, isPrimary = isFirstPhoto)
+                    state.copy(stagedPhotos = state.stagedPhotos + staged)
                 }
             }
         }
 
         private fun onPhotoRemoved(identifier: String) {
             if (editingItemId != null) {
+                // Primary-photo promotion on delete is handled by ImageRepositoryImpl itself,
+                // so edit-mode removal here doesn't need to special-case the primary photo.
                 viewModelScope.launch { imageRepository.deleteImage(identifier) }
             } else {
                 _uiState.update { state ->
-                    val remaining = state.stagedPhotos.filterNot { it.sourceUri == identifier }
-                    val removedWasPrimary = state.stagedPhotos.any { it.sourceUri == identifier && it.isPrimary }
+                    val remaining = state.stagedPhotos.filterNot { it.id == identifier }
+                    val removedWasPrimary = state.stagedPhotos.any { it.id == identifier && it.isPrimary }
                     val promoted =
                         if (removedWasPrimary && remaining.isNotEmpty()) {
                             remaining.mapIndexed { index, photo -> photo.copy(isPrimary = index == 0) }
@@ -154,12 +196,13 @@ class AddEditItemViewModel
             } else {
                 _uiState.update { state ->
                     state.copy(
-                        stagedPhotos = state.stagedPhotos.map { it.copy(isPrimary = it.sourceUri == identifier) },
+                        stagedPhotos = state.stagedPhotos.map { it.copy(isPrimary = it.id == identifier) },
                     )
                 }
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private fun onSave() {
             val state = _uiState.value
             val item =
@@ -178,17 +221,30 @@ class AddEditItemViewModel
                         },
                     timesWorn = timesWorn,
                     lastWornAt = lastWornAt,
-                    addedAt = addedAt,
+                    addedAt = addedAt ?: System.currentTimeMillis(),
+                    sku = sku,
+                    avatarSlot = avatarSlot,
+                    purchasePrice = purchasePrice,
+                    purchaseDate = purchaseDate,
+                    purchaseLocation = purchaseLocation,
                     notes = state.notes.ifBlank { null },
                 )
 
             viewModelScope.launch {
-                _uiState.update { it.copy(isSaving = true) }
+                _uiState.update { it.copy(isSaving = true, saveWarning = null, saveError = null) }
 
-                if (state.isEditMode) {
-                    updateClothingItemUseCase(item)
-                } else {
-                    addClothingItemUseCase(item)
+                try {
+                    if (state.isEditMode) {
+                        updateClothingItemUseCase(item)
+                    } else {
+                        addClothingItemUseCase(item)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to save item ${item.id}", e)
+                    _uiState.update { it.copy(isSaving = false, saveError = SAVE_ERROR) }
+                    return@launch
                 }
 
                 var warning: String? = null
@@ -199,7 +255,7 @@ class AddEditItemViewModel
                     }
                 }
 
-                _uiState.update { it.copy(isSaving = false, isSaved = true, saveWarning = warning ?: it.saveWarning) }
+                _uiState.update { it.copy(isSaving = false, isSaved = true, saveWarning = warning) }
             }
         }
     }

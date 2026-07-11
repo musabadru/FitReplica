@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -76,6 +78,10 @@ fun ItemDetailScreen(
         uiState.photoWarning?.let { warning -> snackbarHostState.showSnackbar(warning) }
     }
 
+    LaunchedEffect(uiState.deleteError) {
+        uiState.deleteError?.let { error -> snackbarHostState.showSnackbar(error) }
+    }
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -100,7 +106,11 @@ fun ItemDetailScreen(
     ) { padding ->
         val item = uiState.item
         if (item == null) {
-            Box(modifier = Modifier.padding(padding).fillMaxSize())
+            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+            }
         } else {
             Column(
                 modifier =

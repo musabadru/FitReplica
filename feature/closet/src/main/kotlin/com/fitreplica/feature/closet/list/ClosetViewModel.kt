@@ -7,6 +7,7 @@ import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.domain.usecase.LogWearEventUseCase
 import com.fitreplica.core.model.ClothingId
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,21 +31,34 @@ class ClosetViewModel
         private val clothingRepository: ClothingRepository,
         private val logWearEventUseCase: LogWearEventUseCase,
     ) : ViewModel() {
+        // Kept separate from filterState: only free-text search needs debouncing to avoid
+        // re-querying on every keystroke. Chip taps (type/status/condition) are discrete,
+        // low-frequency events that should apply immediately — debouncing them too meant the
+        // displayed filter (read from the un-debounced state) briefly disagreed with the
+        // still-stale item list for up to SEARCH_DEBOUNCE_MILLIS after every chip tap.
+        private val searchQueryState = MutableStateFlow("")
         private val filterState = MutableStateFlow(ClosetFilter())
         private val viewModeState = MutableStateFlow(ClosetViewMode.GRID)
 
-        // Debounced so DB-hitting queries don't re-run on every keystroke/chip tap, while
-        // observeItems(filter) does the real filtering on Room's indexed columns/FTS4 —
-        // this is what keeps a 500+ item closet snappy instead of filtering in memory.
+        private val effectiveFilter =
+            combine(searchQueryState.debounce(SEARCH_DEBOUNCE_MILLIS), filterState) { query, filter ->
+                filter.copy(searchQuery = query.ifBlank { null })
+            }
+
         val uiState =
             combine(
-                filterState
-                    .debounce(SEARCH_DEBOUNCE_MILLIS)
-                    .flatMapLatest { filter -> clothingRepository.observeItems(filter) },
+                effectiveFilter.flatMapLatest { filter -> clothingRepository.observeItems(filter) },
+                searchQueryState,
                 filterState,
                 viewModeState,
-            ) { items, filter, viewMode ->
-                ClosetUiState(items = items, filter = filter, viewMode = viewMode, isLoading = false)
+            ) { items, searchQuery, filter, viewMode ->
+                ClosetUiState(
+                    items = items,
+                    searchQuery = searchQuery,
+                    filter = filter,
+                    viewMode = viewMode,
+                    isLoading = false,
+                )
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
@@ -54,7 +68,7 @@ class ClosetViewModel
         fun onAction(action: ClosetUiAction) {
             when (action) {
                 is ClosetUiAction.OnSearchQueryChanged ->
-                    filterState.update { it.copy(searchQuery = action.query.ifBlank { null }) }
+                    searchQueryState.value = action.query
 
                 is ClosetUiAction.OnTypeFilterChanged ->
                     filterState.update { it.copy(type = action.type) }
@@ -82,6 +96,16 @@ class ClosetViewModel
         }
 
         private fun logWearNow(itemId: ClothingId) {
-            viewModelScope.launch { logWearEventUseCase(itemId) }
+            viewModelScope.launch {
+                try {
+                    logWearEventUseCase(itemId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (ignored: Exception) {
+                    // Non-critical: a failed wear-event log shouldn't crash the app. There's
+                    // no dedicated UI surface for this on the list screen (unlike photo/save
+                    // failures elsewhere) — the user can simply retry "Wear now".
+                }
+            }
         }
     }

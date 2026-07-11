@@ -2,6 +2,7 @@ package com.fitreplica.feature.closet.list
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -88,7 +91,7 @@ fun ClosetListScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
-                value = uiState.filter.searchQuery.orEmpty(),
+                value = uiState.searchQuery,
                 onValueChange = { viewModel.onAction(ClosetUiAction.OnSearchQueryChanged(it)) },
                 label = { Text("Search") },
                 singleLine = true,
@@ -103,11 +106,26 @@ fun ClosetListScreen(
                 )
             }
 
-            if (uiState.items.isEmpty() && !uiState.isLoading) {
-                WardrobeEmptyState(
-                    message = "No items yet — tap + to add your first piece.",
-                    modifier = Modifier.fillMaxSize(),
-                )
+            val hasActiveFilter =
+                uiState.searchQuery.isNotBlank() ||
+                    uiState.filter.type != null ||
+                    uiState.filter.status != null ||
+                    uiState.filter.condition != null ||
+                    !uiState.filter.brand.isNullOrBlank() ||
+                    !uiState.filter.colorPrimary.isNullOrBlank()
+
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+            } else if (uiState.items.isEmpty()) {
+                val emptyMessage =
+                    if (hasActiveFilter) {
+                        "No items match these filters."
+                    } else {
+                        "No items yet — tap + to add your first piece."
+                    }
+                WardrobeEmptyState(message = emptyMessage, modifier = Modifier.fillMaxSize())
             } else {
                 ClosetItemsList(
                     items = uiState.items,

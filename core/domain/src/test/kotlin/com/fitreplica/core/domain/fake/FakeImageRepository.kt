@@ -17,6 +17,8 @@ class FakeImageRepository : ImageRepository {
 
     override fun observeImages(itemId: ClothingId) = images.map { list -> list.filter { it.itemId == itemId } }
 
+    override suspend fun getImages(itemId: ClothingId) = images.value.filter { it.itemId == itemId }
+
     override suspend fun addImage(
         itemId: ClothingId,
         sourceUri: String,

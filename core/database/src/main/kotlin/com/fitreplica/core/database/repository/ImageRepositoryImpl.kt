@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import com.fitreplica.core.common.Result
 import com.fitreplica.core.database.dao.ImageDao
 import com.fitreplica.core.database.entity.ImageEntity
@@ -11,8 +12,11 @@ import com.fitreplica.core.domain.repository.ImageRepository
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.Image
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -20,6 +24,7 @@ import javax.inject.Inject
 
 private const val THUMBNAIL_MAX_DIMENSION_PX = 300
 private const val JPEG_QUALITY = 85
+private const val TAG = "ImageRepositoryImpl"
 
 class ImageRepositoryImpl
     @Inject
@@ -30,38 +35,52 @@ class ImageRepositoryImpl
         override fun observeImages(itemId: ClothingId): Flow<List<Image>> =
             imageDao.observeImagesForItem(itemId).map { list -> list.map { it.toDomain() } }
 
+        override suspend fun getImages(itemId: ClothingId): List<Image> =
+            imageDao.getImagesForItem(itemId).map { it.toDomain() }
+
         // Copies the picked/captured source URI into app-private storage and generates a
-        // downscaled thumbnail, degrading to Result.Error on any I/O failure (e.g. disk full)
-        // instead of throwing — per §8g, a photo save failure must never block the item save.
+        // downscaled thumbnail, degrading to Result.Error on any failure (I/O, decode, or a
+        // DB-level failure like a concurrent-delete FK violation) instead of throwing —
+        // per §8g, a photo save failure must never block the item save. Runs on Dispatchers.IO
+        // since file copying and bitmap decode/compress are blocking work that would otherwise
+        // run on whatever dispatcher the caller happens to be on (e.g. Main).
+        @Suppress("TooGenericExceptionCaught")
         override suspend fun addImage(
             itemId: ClothingId,
             sourceUri: String,
             isPrimary: Boolean,
         ): Result<Image> =
-            try {
+            withContext(Dispatchers.IO) {
                 val imageId = UUID.randomUUID().toString()
                 val imageDir = imagesDirFor(itemId).apply { mkdirs() }
                 val photoFile = File(imageDir, "$imageId.jpg")
                 val thumbnailFile = File(imageDir, "${imageId}_thumb.jpg")
 
-                copySourceInto(sourceUri, photoFile)
-                writeThumbnail(photoFile, thumbnailFile)
+                try {
+                    copySourceInto(sourceUri, photoFile)
+                    writeThumbnail(photoFile, thumbnailFile)
 
-                val entity =
-                    ImageEntity(
-                        id = imageId,
-                        itemId = itemId,
-                        uri = photoFile.absolutePath,
-                        thumbnailUri = thumbnailFile.absolutePath,
-                        isPrimary = isPrimary,
-                        takenAt = System.currentTimeMillis(),
-                    )
-                imageDao.insertImage(entity)
-                Result.Success(entity.toDomain())
-            } catch (e: IOException) {
-                Result.Error(e)
-            } catch (e: SecurityException) {
-                Result.Error(e)
+                    val entity =
+                        ImageEntity(
+                            id = imageId,
+                            itemId = itemId,
+                            uri = photoFile.absolutePath,
+                            thumbnailUri = thumbnailFile.absolutePath,
+                            isPrimary = isPrimary,
+                            takenAt = System.currentTimeMillis(),
+                        )
+                    imageDao.insertImage(entity)
+                    Result.Success(entity.toDomain())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Clean up whatever was written before the failure (e.g. a thumbnail
+                    // decode failure after the full-size copy succeeded, or a DB-level
+                    // failure like a concurrent item delete) so no orphaned file remains.
+                    photoFile.delete()
+                    thumbnailFile.delete()
+                    Result.Error(e)
+                }
             }
 
         override suspend fun setPrimaryImage(
@@ -71,11 +90,26 @@ class ImageRepositoryImpl
             imageDao.setPrimaryImage(itemId, imageId)
         }
 
+        // Deletes the DB row before the physical files: if setPrimaryImage/deleteImage throws
+        // partway, a DB failure leaves everything intact and retryable, whereas a file-deletion
+        // failure after a successful DB delete only leaves recoverable orphaned files rather
+        // than a dangling DB record pointing at files that no longer exist.
         override suspend fun deleteImage(imageId: String) {
             val entity = imageDao.findById(imageId) ?: return
-            File(entity.uri).delete()
-            File(entity.thumbnailUri).delete()
             imageDao.deleteImage(imageId)
+
+            if (!File(entity.uri).delete()) {
+                Log.w(TAG, "Failed to delete image file: ${entity.uri}")
+            }
+            if (!File(entity.thumbnailUri).delete()) {
+                Log.w(TAG, "Failed to delete thumbnail file: ${entity.thumbnailUri}")
+            }
+
+            if (entity.isPrimary) {
+                imageDao.getImagesForItem(entity.itemId).firstOrNull()?.let { next ->
+                    imageDao.setPrimaryImage(entity.itemId, next.id)
+                }
+            }
         }
 
         private fun imagesDirFor(itemId: ClothingId): File = File(context.filesDir, "images/${itemId.value}")
@@ -105,7 +139,8 @@ class ImageRepositoryImpl
                     ?: throw IOException("Unable to decode image: ${source.absolutePath}")
             bitmap.use { decoded ->
                 destination.outputStream().use { output ->
-                    decoded.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+                    val compressed = decoded.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+                    if (!compressed) throw IOException("Unable to compress thumbnail: ${destination.absolutePath}")
                 }
             }
         }

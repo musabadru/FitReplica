@@ -8,6 +8,10 @@ import kotlinx.coroutines.flow.Flow
 interface ImageRepository {
     fun observeImages(itemId: ClothingId): Flow<List<Image>>
 
+    // One-shot snapshot for callers (e.g. item deletion) that need a fixed list to act on
+    // rather than a live stream — avoids a TOCTOU race against concurrent image additions.
+    suspend fun getImages(itemId: ClothingId): List<Image>
+
     // sourceUri is a String, not android.net.Uri, so this interface stays Android-free —
     // the implementation (core:database) owns parsing/copying the platform URI.
     suspend fun addImage(

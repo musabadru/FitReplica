@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.map
 // test sourceSet and isn't published as a test fixture, so it isn't visible here.
 class FakeClothingRepository : ClothingRepository {
     private val items = MutableStateFlow<List<ClothingItem>>(emptyList())
-    val wearLog = mutableListOf<ClothingId>()
+    val wearLog = mutableListOf<Triple<ClothingId, OutfitId?, String?>>()
 
     override fun observeItems(filter: ClosetFilter) =
         items.map { list ->
@@ -22,7 +22,8 @@ class FakeClothingRepository : ClothingRepository {
                     (filter.status == null || item.status == filter.status) &&
                     (filter.condition == null || item.condition == filter.condition) &&
                     (filter.brand == null || item.brand == filter.brand) &&
-                    (filter.colorPrimary == null || item.colorPrimary == filter.colorPrimary)
+                    (filter.colorPrimary == null || item.colorPrimary == filter.colorPrimary) &&
+                    matchesSearchQuery(item, filter.searchQuery)
             }
         }
 
@@ -45,7 +46,7 @@ class FakeClothingRepository : ClothingRepository {
         outfitId: OutfitId?,
         context: String?,
     ) {
-        wearLog += itemId
+        wearLog += Triple(itemId, outfitId, context)
     }
 
     override suspend fun updateCondition(
@@ -53,5 +54,18 @@ class FakeClothingRepository : ClothingRepository {
         condition: Condition,
     ) {
         items.value = items.value.map { if (it.id == itemId) it.copy(condition = condition) else it }
+    }
+
+    // A simple case-insensitive substring approximation of the real repository's FTS4 prefix
+    // matching — not exact (see core:domain's FakeClothingRepository for a closer token-based
+    // approximation), but enough for this fake to actually distinguish match/no-match rather
+    // than ignoring searchQuery entirely, which would let a broken search filter pass silently.
+    private fun matchesSearchQuery(
+        item: ClothingItem,
+        query: String?,
+    ): Boolean {
+        if (query.isNullOrBlank()) return true
+        val haystack = listOfNotNull(item.name, item.brand, item.colorPrimary).joinToString(" ").lowercase()
+        return haystack.contains(query.lowercase())
     }
 }

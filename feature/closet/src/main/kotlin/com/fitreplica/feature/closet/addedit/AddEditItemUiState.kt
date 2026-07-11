@@ -10,7 +10,11 @@ import com.fitreplica.core.model.Status
 
 // A photo picked/captured before the item itself has been saved — ImageEntity has a real
 // FK to clothing_items, so it can't be persisted until a ClothingId row actually exists.
+// `id` is distinct from `sourceUri` because picking the same gallery photo twice produces
+// two staged entries with an identical sourceUri — using sourceUri as the LazyRow key (or to
+// disambiguate remove/set-primary actions) would collide between them.
 data class StagedPhoto(
+    val id: String,
     val sourceUri: String,
     val isPrimary: Boolean,
 )
@@ -34,6 +38,7 @@ data class AddEditItemUiState(
     val isSaving: Boolean = false,
     val isSaved: Boolean = false,
     val saveWarning: String? = null,
+    val saveError: String? = null,
 ) {
     val isEditMode: Boolean get() = editingItemId != null
 }

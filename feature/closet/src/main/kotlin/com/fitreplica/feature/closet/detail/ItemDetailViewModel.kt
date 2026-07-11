@@ -1,5 +1,6 @@
 package com.fitreplica.feature.closet.detail
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import com.fitreplica.core.domain.usecase.LogWearEventUseCase
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.feature.closet.ITEM_ID_ARG
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -20,6 +22,8 @@ import javax.inject.Inject
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 private const val PHOTO_SAVE_WARNING = "Couldn't save that photo (storage issue)."
+private const val DELETE_ERROR = "Couldn't delete this item. Try again."
+private const val TAG = "ItemDetailViewModel"
 
 @HiltViewModel
 class ItemDetailViewModel
@@ -34,6 +38,7 @@ class ItemDetailViewModel
         private val itemId = ClothingId(checkNotNull(savedStateHandle.get<String>(ITEM_ID_ARG)))
         private val isDeletedState = MutableStateFlow(false)
         private val photoWarningState = MutableStateFlow<String?>(null)
+        private val deleteErrorState = MutableStateFlow<String?>(null)
 
         val uiState =
             combine(
@@ -41,13 +46,15 @@ class ItemDetailViewModel
                 imageRepository.observeImages(itemId),
                 isDeletedState,
                 photoWarningState,
-            ) { item, images, isDeleted, photoWarning ->
+                deleteErrorState,
+            ) { item, images, isDeleted, photoWarning, deleteError ->
                 ItemDetailUiState(
                     item = item,
                     images = images,
                     isLoading = false,
                     isDeleted = isDeleted,
                     photoWarning = photoWarning,
+                    deleteError = deleteError,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -60,11 +67,7 @@ class ItemDetailViewModel
                 ItemDetailUiAction.OnWearNowClicked ->
                     viewModelScope.launch { logWearEventUseCase(itemId) }
 
-                ItemDetailUiAction.OnDeleteConfirmed ->
-                    viewModelScope.launch {
-                        deleteClothingItemUseCase(itemId)
-                        isDeletedState.value = true
-                    }
+                ItemDetailUiAction.OnDeleteConfirmed -> deleteItem()
 
                 is ItemDetailUiAction.OnSetPrimaryImage ->
                     viewModelScope.launch { imageRepository.setPrimaryImage(itemId, action.imageId) }
@@ -72,12 +75,35 @@ class ItemDetailViewModel
                 is ItemDetailUiAction.OnDeleteImage ->
                     viewModelScope.launch { imageRepository.deleteImage(action.imageId) }
 
-                is ItemDetailUiAction.OnPhotoAdded ->
-                    viewModelScope.launch {
-                        val isFirstPhoto = uiState.value.images.isEmpty()
-                        val result = imageRepository.addImage(itemId, action.sourceUri, isPrimary = isFirstPhoto)
-                        if (result is Result.Error) photoWarningState.value = PHOTO_SAVE_WARNING
-                    }
+                is ItemDetailUiAction.OnPhotoAdded -> onPhotoAdded(action.sourceUri)
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun deleteItem() {
+            viewModelScope.launch {
+                deleteErrorState.value = null
+                try {
+                    deleteClothingItemUseCase(itemId)
+                    isDeletedState.value = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to delete item $itemId", e)
+                    deleteErrorState.value = DELETE_ERROR
+                }
+            }
+        }
+
+        private fun onPhotoAdded(sourceUri: String) {
+            viewModelScope.launch {
+                // Cleared up front so a success after a prior failure dismisses the stale
+                // warning, and a repeated identical failure still re-emits (StateFlow skips
+                // re-publishing an unchanged value, so going through null first is required).
+                photoWarningState.value = null
+                val isFirstPhoto = uiState.value.images.isEmpty()
+                val result = imageRepository.addImage(itemId, sourceUri, isPrimary = isFirstPhoto)
+                if (result is Result.Error) photoWarningState.value = PHOTO_SAVE_WARNING
             }
         }
     }

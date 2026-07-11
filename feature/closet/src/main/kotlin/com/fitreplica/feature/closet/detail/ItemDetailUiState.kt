@@ -9,4 +9,5 @@ data class ItemDetailUiState(
     val isLoading: Boolean = true,
     val isDeleted: Boolean = false,
     val photoWarning: String? = null,
+    val deleteError: String? = null,
 )

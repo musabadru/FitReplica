@@ -62,7 +62,7 @@ class ClosetViewModelTest {
             viewModel.onAction(ClosetUiAction.OnWearNowClicked(item.id))
             advanceUntilIdle()
 
-            assertEquals(listOf(item.id), repository.wearLog)
+            assertEquals(listOf(Triple(item.id, null, null)), repository.wearLog)
         }
 
     private fun sampleItem(

@@ -65,10 +65,16 @@ fun AddEditItemScreen(
         rememberPhotoLaunchers(onPhotoReady = { viewModel.onAction(AddEditItemUiAction.OnPhotoAdded(it)) })
 
     LaunchedEffect(uiState.isSaved) {
-        if (uiState.isSaved) onSaved()
+        if (uiState.isSaved) {
+            onSaved()
+            viewModel.consumeSaved()
+        }
     }
     LaunchedEffect(uiState.saveWarning) {
         uiState.saveWarning?.let { snackbarHostState.showSnackbar(it) }
+    }
+    LaunchedEffect(uiState.saveError) {
+        uiState.saveError?.let { snackbarHostState.showSnackbar(it) }
     }
 
     Scaffold(
@@ -197,7 +203,7 @@ private fun PhotoSection(
 ) {
     val tiles =
         existingImages.map { PhotoTile(it.id, it.thumbnailUri, it.isPrimary) } +
-            stagedPhotos.map { PhotoTile(it.sourceUri, it.sourceUri, it.isPrimary) }
+            stagedPhotos.map { PhotoTile(it.id, it.sourceUri, it.isPrimary) }
 
     Column {
         Text("Photos", style = MaterialTheme.typography.labelMedium)
