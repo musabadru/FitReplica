@@ -10,10 +10,18 @@ val versionProps =
     Properties().apply {
         load(rootProject.file("version.properties").inputStream())
     }
-val releaseVersionName = versionProps.getProperty("VERSION_NAME")
+// VERSION_NAME carries a trailing "# x-release-please-version" marker (release-please's generic
+// updater requires the marker on the same line as the value it rewrites), so only the leading
+// semver token is the real version — java.util.Properties has no mid-line comment syntax to strip it.
+val releaseVersionName =
+    Regex("""\d+\.\d+\.\d+""").find(versionProps.getProperty("VERSION_NAME"))?.value
+        ?: error("version.properties VERSION_NAME must contain a semantic version")
 val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toInt() }
-// major/minor/patch packed so versionCode stays monotonic across ordinary semver bumps.
-val releaseVersionCode = verMajor * 10_000 + verMinor * 100 + verPatch
+require(verMinor in 0..999 && verPatch in 0..999) {
+    "minor/patch must stay under 1000 to keep versionCode packing collision-free: $releaseVersionName"
+}
+// Wide packing (minor/patch capped at 3 digits each) so e.g. 0.1.100 and 0.2.0 can't collide.
+val releaseVersionCode = verMajor * 1_000_000 + verMinor * 1_000 + verPatch
 
 val localProperties =
     Properties().apply {
