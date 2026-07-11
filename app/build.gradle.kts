@@ -13,8 +13,11 @@ val versionProps =
 // VERSION_NAME carries a trailing "# x-release-please-version" marker (release-please's generic
 // updater requires the marker on the same line as the value it rewrites), so only the leading
 // semver token is the real version — java.util.Properties has no mid-line comment syntax to strip it.
+val versionNameProperty =
+    versionProps.getProperty("VERSION_NAME")
+        ?: error("version.properties is missing VERSION_NAME")
 val releaseVersionName =
-    Regex("""\d+\.\d+\.\d+""").find(versionProps.getProperty("VERSION_NAME"))?.value
+    Regex("""\d+\.\d+\.\d+""").find(versionNameProperty)?.value
         ?: error("version.properties VERSION_NAME must contain a semantic version")
 val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toInt() }
 require(verMinor in 0..999 && verPatch in 0..999) {
