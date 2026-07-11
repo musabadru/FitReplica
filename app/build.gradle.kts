@@ -23,7 +23,7 @@ val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toIn
 require(
     verMinor in 0..999 &&
         verPatch in 0..999 &&
-        verMajor.toLong() * 1_000_000 + verMinor * 1_000L + verPatch <= Int.MAX_VALUE
+        verMajor.toLong() * 1_000_000 + verMinor * 1_000L + verPatch <= Int.MAX_VALUE,
 ) {
     "versionCode must fit in an Int with minor/patch under 1000: $releaseVersionName"
 }
