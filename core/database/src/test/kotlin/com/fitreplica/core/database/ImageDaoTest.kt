@@ -126,6 +126,32 @@ class ImageDaoTest {
             )
         }
 
+    @Test
+    fun `deleteAndPromotePrimary promotes the earliest remaining image when the primary is deleted`() =
+        runTest {
+            dao.insertImage(image(id = "image-1", isPrimary = true).copy(takenAt = 100L))
+            dao.insertImage(image(id = "image-2", isPrimary = false).copy(takenAt = 200L))
+
+            dao.deleteAndPromotePrimary("image-1")
+
+            val remaining = dao.observeImagesForItem(itemId).first()
+            assertEquals(listOf("image-2"), remaining.map { it.id })
+            assertEquals(listOf("image-2"), remaining.filter { it.isPrimary }.map { it.id })
+        }
+
+    @Test
+    fun `deleteAndPromotePrimary leaves the remaining primary alone when the deleted image wasn't primary`() =
+        runTest {
+            dao.insertImage(image(id = "image-1", isPrimary = true))
+            dao.insertImage(image(id = "image-2", isPrimary = false))
+
+            dao.deleteAndPromotePrimary("image-2")
+
+            val remaining = dao.observeImagesForItem(itemId).first()
+            assertEquals(listOf("image-1"), remaining.map { it.id })
+            assertEquals(listOf("image-1"), remaining.filter { it.isPrimary }.map { it.id })
+        }
+
     private fun image(
         id: String,
         isPrimary: Boolean,

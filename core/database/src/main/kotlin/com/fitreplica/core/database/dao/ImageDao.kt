@@ -50,6 +50,29 @@ abstract class ImageDao {
     @Query("SELECT * FROM images WHERE itemId = :itemId ORDER BY takenAt ASC")
     abstract fun observeImagesForItem(itemId: ClothingId): Flow<List<ImageEntity>>
 
+    // One-shot variant of observeImagesForItem for callers that need a snapshot rather than
+    // a live stream (e.g. item deletion, which must act on a fixed list of images to clean up).
+    @Query("SELECT * FROM images WHERE itemId = :itemId ORDER BY takenAt ASC")
+    abstract suspend fun getImagesForItem(itemId: ClothingId): List<ImageEntity>
+
+    @Query("SELECT * FROM images WHERE id = :imageId")
+    abstract suspend fun findById(imageId: String): ImageEntity?
+
     @Query("DELETE FROM images WHERE id = :imageId")
-    abstract suspend fun deleteImage(imageId: String)
+    protected abstract suspend fun deleteImage(imageId: String)
+
+    // Deleting a primary image and promoting a replacement must be one atomic unit — a
+    // failure partway (e.g. the promotion's setPrimaryImage) rolls back the delete too,
+    // rather than leaving the image gone but no new primary designated, or vice versa.
+    @Transaction
+    open suspend fun deleteAndPromotePrimary(imageId: String): ImageEntity? {
+        val entity = findById(imageId) ?: return null
+        deleteImage(imageId)
+        if (entity.isPrimary) {
+            getImagesForItem(entity.itemId).firstOrNull()?.let { next ->
+                setPrimaryImage(entity.itemId, next.id)
+            }
+        }
+        return entity
+    }
 }

@@ -11,6 +11,13 @@ See [wardrobe_app_architecture.md](wardrobe_app_architecture.md) for the full ar
 - Room (local persistence), Proto DataStore (preferences), Hilt (DI)
 - CameraX + ML Kit (barcode/OCR, opt-in and on-device respectively)
 
+## Design language
+
+- **Palette**: lean fully into Material You dynamic color; minimal fixed brand color.
+- **Mood**: bold, expressive, playful — leans into M3 Expressive motion.
+
+When working on UI/UX in this repo, load the relevant Claude Code skills (`compose`, `material-3-uiux-skill`, `android-ux`) for Material 3 Expressive guidance, Compose best practices, and UX audits.
+
 ## Module graph
 
 ```

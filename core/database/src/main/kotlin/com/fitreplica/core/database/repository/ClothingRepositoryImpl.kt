@@ -50,6 +50,14 @@ class ClothingRepositoryImpl
             clothingDao.insertItem(item.toEntity())
         }
 
+        override suspend fun updateItem(item: ClothingItem) {
+            clothingDao.updateItem(item.toEntity())
+        }
+
+        override suspend fun deleteItem(itemId: ClothingId) {
+            clothingDao.deleteItem(itemId)
+        }
+
         override suspend fun logWear(
             itemId: ClothingId,
             outfitId: OutfitId?,
