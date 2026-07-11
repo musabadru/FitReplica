@@ -1,21 +1,52 @@
+import java.util.Properties
+
 plugins {
     id("fitreplica.android.application")
     id("fitreplica.android.application.compose")
     id("fitreplica.android.hilt")
 }
 
+val versionProps = Properties().apply {
+    load(rootProject.file("version.properties").inputStream())
+}
+val releaseVersionName = versionProps.getProperty("VERSION_NAME")
+val (verMajor, verMinor, verPatch) = releaseVersionName.split(".").map { it.toInt() }
+// major/minor/patch packed so versionCode stays monotonic across ordinary semver bumps.
+val releaseVersionCode = verMajor * 10_000 + verMinor * 100 + verPatch
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    }
+}
+fun signingProperty(key: String): String? = localProperties.getProperty(key) ?: System.getenv(key)
+val releaseStoreFile = signingProperty("RELEASE_STORE_FILE")
+
 android {
     namespace = "com.fitreplica.app"
 
     defaultConfig {
         applicationId = "com.fitreplica.app"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseStoreFile != null) {
+                storeFile = file(releaseStoreFile)
+                storePassword = signingProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = signingProperty("RELEASE_KEY_ALIAS")
+                keyPassword = signingProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = if (releaseStoreFile != null) signingConfigs.getByName("release") else null
         }
     }
 }

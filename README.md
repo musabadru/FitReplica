@@ -43,6 +43,18 @@ Requires Android Studio (or the SDK + JDK 17 on `PATH`) with SDK platform 35 ins
 
 Or open the project root in Android Studio and let Gradle sync, then Run.
 
+## Releases
+
+Version numbers are managed automatically by [release-please](https://github.com/googleapis/release-please) from [Conventional Commits](https://www.conventionalcommits.org/) on `main`:
+
+1. Every merge to `main` updates (or opens) a standing "release PR" that accumulates the next semantic version and changelog entries.
+2. Merging that release PR creates a git tag and GitHub Release, and bumps `VERSION_NAME` in [`version.properties`](version.properties) — the single source of truth for the app's version. `versionCode` is derived from it at build time (see [`app/build.gradle.kts`](app/build.gradle.kts)), so it never needs manual bumping.
+3. That tag triggers [`.github/workflows/release-please.yml`](.github/workflows/release-please.yml) to build a signed release APK and attach it to the GitHub Release.
+
+**Repo secrets required** for signed CI builds (`Settings → Secrets and variables → Actions`): `RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`.
+
+**Building a signed release APK locally**: add these keys to your (gitignored) `local.properties` — `RELEASE_STORE_FILE` (absolute path to the `.jks`), `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD` — then run `./gradlew :app:assembleRelease`. Without these, `assembleRelease` still succeeds but produces an unsigned APK (used by CI's `release-sanity` check on PRs).
+
 ## Contributing
 
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
