@@ -2,19 +2,18 @@ package com.fitreplica.core.domain.usecase
 
 import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.model.ClothingId
-import com.fitreplica.core.model.OutfitId
+import com.fitreplica.core.model.Condition
 import javax.inject.Inject
 
-class LogWearEventUseCase
+class UpdateConditionUseCase
     @Inject
     constructor(
         private val clothingRepository: ClothingRepository,
     ) {
         suspend operator fun invoke(
             itemId: ClothingId,
-            outfitId: OutfitId? = null,
-            context: String? = null,
+            condition: Condition,
         ) {
-            clothingRepository.logWear(itemId, outfitId, context)
+            clothingRepository.updateCondition(itemId, condition)
         }
     }

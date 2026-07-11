@@ -15,4 +15,7 @@ dependencies {
 
     implementation(libs.datastore.core)
     implementation(libs.datastore)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
