@@ -20,6 +20,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 private const val WEAR_EVENT_TIME_MILLIS = 1_000L
+private const val COLUMN_ID = 0
+private const val COLUMN_ITEM_ID = 1
+private const val COLUMN_DATE_TIME = 2
+private const val COLUMN_CONTEXT = 3
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -62,6 +66,15 @@ class ClothingDaoTest {
             val updated = dao.observeItem(item.id).first()
             assertEquals(1, updated?.timesWorn)
             assertEquals(WEAR_EVENT_TIME_MILLIS, updated?.lastWornAt)
+
+            database.query("SELECT id, itemId, dateTime, context FROM wear_events", null).use { cursor ->
+                assertEquals(1, cursor.count)
+                cursor.moveToFirst()
+                assertEquals("event-1", cursor.getString(COLUMN_ID))
+                assertEquals(item.id.value, cursor.getString(COLUMN_ITEM_ID))
+                assertEquals(WEAR_EVENT_TIME_MILLIS, cursor.getLong(COLUMN_DATE_TIME))
+                assertEquals("work", cursor.getString(COLUMN_CONTEXT))
+            }
         }
 
     @Test

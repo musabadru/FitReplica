@@ -16,6 +16,7 @@ val MIGRATION_1_2 =
             createOutfitTables(db)
             createLaundryTables(db)
             createImagesTable(db)
+            addWearEventOutfitForeignKey(db)
             createFtsSearch(db)
         }
     }
@@ -98,6 +99,38 @@ private fun createImagesTable(db: SupportSQLiteDatabase) {
         """.trimIndent(),
     )
     db.execSQL("CREATE INDEX IF NOT EXISTS `index_images_itemId` ON `images` (`itemId`)")
+}
+
+// SQLite has no ALTER TABLE ... ADD CONSTRAINT, so adding the wear_events -> outfits
+// foreign key (needed now that `outfits` exists) requires the standard SQLite table-
+// recreation dance: create the new shape, copy rows across, drop the old table, rename.
+// Must run after createOutfitTables() so the referenced `outfits` table already exists.
+private fun addWearEventOutfitForeignKey(db: SupportSQLiteDatabase) {
+    db.execSQL(
+        """
+        CREATE TABLE `wear_events_new` (
+            `id` TEXT NOT NULL,
+            `itemId` TEXT NOT NULL,
+            `outfitId` TEXT,
+            `dateTime` INTEGER NOT NULL,
+            `context` TEXT,
+            `notes` TEXT,
+            PRIMARY KEY(`id`),
+            FOREIGN KEY(`itemId`) REFERENCES `clothing_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+            FOREIGN KEY(`outfitId`) REFERENCES `outfits`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+        )
+        """.trimIndent(),
+    )
+    db.execSQL(
+        """
+        INSERT INTO `wear_events_new` (`id`, `itemId`, `outfitId`, `dateTime`, `context`, `notes`)
+        SELECT `id`, `itemId`, `outfitId`, `dateTime`, `context`, `notes` FROM `wear_events`
+        """.trimIndent(),
+    )
+    db.execSQL("DROP TABLE `wear_events`")
+    db.execSQL("ALTER TABLE `wear_events_new` RENAME TO `wear_events`")
+    db.execSQL("CREATE INDEX IF NOT EXISTS `index_wear_events_itemId` ON `wear_events` (`itemId`)")
+    db.execSQL("CREATE INDEX IF NOT EXISTS `index_wear_events_outfitId` ON `wear_events` (`outfitId`)")
 }
 
 // Room only auto-creates the FTS4 content-sync triggers via onCreate on a fresh

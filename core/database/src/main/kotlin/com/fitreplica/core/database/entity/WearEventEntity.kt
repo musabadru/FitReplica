@@ -17,8 +17,16 @@ import com.fitreplica.core.model.WearEventId
             childColumns = ["itemId"],
             onDelete = ForeignKey.CASCADE,
         ),
+        // SET_NULL, not CASCADE: deleting an outfit shouldn't erase the wear history
+        // logged against it — the event just becomes un-linked from any outfit.
+        ForeignKey(
+            entity = OutfitEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["outfitId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("itemId")],
+    indices = [Index("itemId"), Index("outfitId")],
 )
 data class WearEventEntity(
     @PrimaryKey val id: WearEventId,
