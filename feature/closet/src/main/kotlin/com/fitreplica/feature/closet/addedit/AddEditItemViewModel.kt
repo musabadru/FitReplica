@@ -231,7 +231,14 @@ class AddEditItemViewModel
                 )
 
             viewModelScope.launch {
-                _uiState.update { it.copy(isSaving = true, saveWarning = null, saveError = null) }
+                // saveWarning is intentionally left untouched here: in edit mode it may hold
+                // an in-flight photo-add failure from a concurrent onPhotoAdded call (itemId
+                // != null branch) that has nothing to do with this save of unrelated field
+                // edits, and clearing it up front used to erase that warning before the user
+                // ever saw it. Add mode's own staged-photo outcome below always fully
+                // replaces (not merges into) saveWarning, so it self-corrects each save
+                // without needing an earlier clear.
+                _uiState.update { it.copy(isSaving = true, saveError = null) }
 
                 try {
                     if (state.isEditMode) {
@@ -255,7 +262,13 @@ class AddEditItemViewModel
                     }
                 }
 
-                _uiState.update { it.copy(isSaving = false, isSaved = true, saveWarning = warning) }
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        isSaved = true,
+                        saveWarning = if (state.isEditMode) it.saveWarning else warning,
+                    )
+                }
             }
         }
     }

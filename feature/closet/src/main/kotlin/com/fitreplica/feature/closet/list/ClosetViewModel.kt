@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -40,8 +42,20 @@ class ClosetViewModel
         private val filterState = MutableStateFlow(ClosetFilter())
         private val viewModeState = MutableStateFlow(ClosetViewMode.GRID)
 
+        // debounce() waits out the full window before emitting even the *first* value, so
+        // without onStart a cold subscriber would wait SEARCH_DEBOUNCE_MILLIS before the
+        // first Room query ever runs — a visible startup delay for data that's often already
+        // cached locally. onStart emits the current (typically empty) query immediately, and
+        // distinctUntilChanged drops the debounced flow's own duplicate re-emission of that
+        // same value ~300ms later.
         private val effectiveFilter =
-            combine(searchQueryState.debounce(SEARCH_DEBOUNCE_MILLIS), filterState) { query, filter ->
+            combine(
+                searchQueryState
+                    .debounce(SEARCH_DEBOUNCE_MILLIS)
+                    .onStart { emit(searchQueryState.value) }
+                    .distinctUntilChanged(),
+                filterState,
+            ) { query, filter ->
                 filter.copy(searchQuery = query.ifBlank { null })
             }
 

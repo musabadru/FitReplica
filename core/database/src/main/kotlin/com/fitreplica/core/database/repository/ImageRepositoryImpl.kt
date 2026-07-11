@@ -94,6 +94,7 @@ class ImageRepositoryImpl
         // partway, a DB failure leaves everything intact and retryable, whereas a file-deletion
         // failure after a successful DB delete only leaves recoverable orphaned files rather
         // than a dangling DB record pointing at files that no longer exist.
+        @Suppress("TooGenericExceptionCaught")
         override suspend fun deleteImage(imageId: String) {
             val entity = imageDao.findById(imageId) ?: return
             imageDao.deleteImage(imageId)
@@ -105,9 +106,18 @@ class ImageRepositoryImpl
                 Log.w(TAG, "Failed to delete thumbnail file: ${entity.thumbnailUri}")
             }
 
+            // Best-effort: the image row is already gone at this point, so a promotion
+            // failure here must not escape and crash callers that don't expect deleteImage
+            // to throw for what is, from their perspective, a secondary cleanup step.
             if (entity.isPrimary) {
-                imageDao.getImagesForItem(entity.itemId).firstOrNull()?.let { next ->
-                    imageDao.setPrimaryImage(entity.itemId, next.id)
+                try {
+                    imageDao.getImagesForItem(entity.itemId).firstOrNull()?.let { next ->
+                        imageDao.setPrimaryImage(entity.itemId, next.id)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to promote a new primary image for item ${entity.itemId}", e)
                 }
             }
         }
