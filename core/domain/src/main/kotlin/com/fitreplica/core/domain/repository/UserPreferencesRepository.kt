@@ -10,6 +10,8 @@ data class UserPreferencesData(
 
 interface UserPreferencesRepository {
     val userPreferences: Flow<UserPreferencesData>
+
     suspend fun setAvatarModuleEnabled(enabled: Boolean)
+
     suspend fun setMetadataModuleEnabled(enabled: Boolean)
 }

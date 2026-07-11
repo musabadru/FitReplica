@@ -25,7 +25,10 @@ abstract class ClothingDao {
      * so the two can never drift out of sync.
      */
     @Transaction
-    open suspend fun logWear(itemId: ClothingId, event: WearEventEntity) {
+    open suspend fun logWear(
+        itemId: ClothingId,
+        event: WearEventEntity,
+    ) {
         insertWearEvent(event)
         updateLastWorn(itemId, event.dateTime)
     }
@@ -34,5 +37,8 @@ abstract class ClothingDao {
     abstract suspend fun insertWearEvent(event: WearEventEntity)
 
     @Query("UPDATE clothing_items SET lastWornAt = :wornAt, timesWorn = timesWorn + 1 WHERE id = :itemId")
-    abstract suspend fun updateLastWorn(itemId: ClothingId, wornAt: Long)
+    abstract suspend fun updateLastWorn(
+        itemId: ClothingId,
+        wornAt: Long,
+    )
 }

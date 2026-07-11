@@ -16,7 +16,10 @@ object UserPreferencesSerializer : Serializer<UserPreferences> {
             throw CorruptionException("Cannot read UserPreferences proto", exception)
         }
 
-    override suspend fun writeTo(t: UserPreferences, output: OutputStream) {
+    override suspend fun writeTo(
+        t: UserPreferences,
+        output: OutputStream,
+    ) {
         t.writeTo(output)
     }
 }

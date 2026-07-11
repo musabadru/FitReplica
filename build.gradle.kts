@@ -14,4 +14,17 @@ plugins {
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+        filter {
+            // Excludes KSP/protobuf-generated sources under build/generated/ — they're not
+            // hand-written and shouldn't be held to hand-written style rules.
+            exclude { element -> element.file.path.contains("generated") }
+        }
+    }
+
+    extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        buildUponDefaultConfig = true
+        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    }
 }

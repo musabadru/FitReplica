@@ -16,8 +16,9 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "fitreplica.db").build()
+    fun provideAppDatabase(
+        @ApplicationContext context: Context,
+    ): AppDatabase = Room.databaseBuilder(context, AppDatabase::class.java, "fitreplica.db").build()
 
     @Provides
     fun provideClothingDao(database: AppDatabase): ClothingDao = database.clothingDao()

@@ -16,13 +16,14 @@ data class AvatarConfig(
     companion object {
         const val DEFAULT_HEIGHT_CM = 170f
 
-        fun default(skinTone: SkinTone = SkinTone.MEDIUM): AvatarConfig = AvatarConfig(
-            heightCm = DEFAULT_HEIGHT_CM,
-            chestBustCm = null,
-            waistCm = null,
-            hipCm = null,
-            skinTone = skinTone,
-            animationEnabled = true,
-        )
+        fun default(skinTone: SkinTone = SkinTone.MEDIUM): AvatarConfig =
+            AvatarConfig(
+                heightCm = DEFAULT_HEIGHT_CM,
+                chestBustCm = null,
+                waistCm = null,
+                hipCm = null,
+                skinTone = skinTone,
+                animationEnabled = true,
+            )
     }
 }

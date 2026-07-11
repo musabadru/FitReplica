@@ -10,25 +10,27 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val LightColors = lightColorScheme(
-    primary = WardrobePrimary,
-    onPrimary = WardrobeOnPrimary,
-    secondary = WardrobeSecondary,
-    tertiary = WardrobeTertiary,
-    background = WardrobeBackground,
-    surface = WardrobeSurface,
-    error = WardrobeError,
-)
+private val LightColors =
+    lightColorScheme(
+        primary = WardrobePrimary,
+        onPrimary = WardrobeOnPrimary,
+        secondary = WardrobeSecondary,
+        tertiary = WardrobeTertiary,
+        background = WardrobeBackground,
+        surface = WardrobeSurface,
+        error = WardrobeError,
+    )
 
-private val DarkColors = darkColorScheme(
-    primary = WardrobePrimaryDark,
-    onPrimary = WardrobeOnPrimaryDark,
-    secondary = WardrobeSecondaryDark,
-    tertiary = WardrobeTertiaryDark,
-    background = WardrobeBackgroundDark,
-    surface = WardrobeSurfaceDark,
-    error = WardrobeErrorDark,
-)
+private val DarkColors =
+    darkColorScheme(
+        primary = WardrobePrimaryDark,
+        onPrimary = WardrobeOnPrimaryDark,
+        secondary = WardrobeSecondaryDark,
+        tertiary = WardrobeTertiaryDark,
+        background = WardrobeBackgroundDark,
+        surface = WardrobeSurfaceDark,
+        error = WardrobeErrorDark,
+    )
 
 @Composable
 fun FitReplicaTheme(
@@ -39,12 +41,13 @@ fun FitReplicaTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        darkTheme -> DarkColors
-        else -> LightColors
-    }
+    val colorScheme =
+        when {
+            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            darkTheme -> DarkColors
+            else -> LightColors
+        }
 
     MaterialTheme(
         colorScheme = colorScheme,

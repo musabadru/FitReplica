@@ -2,6 +2,7 @@ package com.fitreplica.core.datastore.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import com.fitreplica.core.datastore.UserPreferences
 import com.fitreplica.core.datastore.UserPreferencesRepositoryImpl
@@ -16,7 +17,6 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import androidx.datastore.core.DataStoreFactory
 import javax.inject.Singleton
 
 @Module
@@ -26,11 +26,12 @@ object DataStoreModule {
     @Singleton
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
-    ): DataStore<UserPreferences> = DataStoreFactory.create(
-        serializer = UserPreferencesSerializer,
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        produceFile = { context.dataStoreFile("user_preferences.pb") },
-    )
+    ): DataStore<UserPreferences> =
+        DataStoreFactory.create(
+            serializer = UserPreferencesSerializer,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            produceFile = { context.dataStoreFile("user_preferences.pb") },
+        )
 }
 
 @Module
@@ -38,7 +39,5 @@ object DataStoreModule {
 abstract class DataStoreBindsModule {
     @Binds
     @Singleton
-    abstract fun bindUserPreferencesRepository(
-        impl: UserPreferencesRepositoryImpl,
-    ): UserPreferencesRepository
+    abstract fun bindUserPreferencesRepository(impl: UserPreferencesRepositoryImpl): UserPreferencesRepository
 }

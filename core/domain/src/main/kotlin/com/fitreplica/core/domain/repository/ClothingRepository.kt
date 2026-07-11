@@ -6,7 +6,13 @@ import kotlinx.coroutines.flow.Flow
 
 interface ClothingRepository {
     fun observeItems(): Flow<List<ClothingItem>>
+
     fun observeItem(itemId: ClothingId): Flow<ClothingItem?>
+
     suspend fun addItem(item: ClothingItem)
-    suspend fun logWear(itemId: ClothingId, context: String?)
+
+    suspend fun logWear(
+        itemId: ClothingId,
+        context: String?,
+    )
 }

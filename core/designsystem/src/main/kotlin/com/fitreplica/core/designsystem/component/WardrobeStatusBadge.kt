@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+private const val PILL_SHAPE_PERCENT = 50
+
 @Composable
 fun WardrobeStatusBadge(
     label: String,
@@ -16,7 +18,7 @@ fun WardrobeStatusBadge(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(PILL_SHAPE_PERCENT),
         color = MaterialTheme.colorScheme.secondaryContainer,
     ) {
         Text(

@@ -9,14 +9,16 @@ import androidx.compose.animation.core.spring
  */
 object WardrobeMotion {
     /** List/filter changes — calm, minimal overshoot. */
-    fun <T> calmSpring(): SpringSpec<T> = spring(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMediumLow,
-    )
+    fun <T> calmSpring(): SpringSpec<T> =
+        spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        )
 
     /** Avatar reveal, hero transitions — more expressive, some bounce. */
-    fun <T> expressiveSpring(): SpringSpec<T> = spring(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow,
-    )
+    fun <T> expressiveSpring(): SpringSpec<T> =
+        spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        )
 }
