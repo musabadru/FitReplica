@@ -254,13 +254,7 @@ class AddEditItemViewModel
                     return@launch
                 }
 
-                var warning: String? = null
-                if (!state.isEditMode) {
-                    state.stagedPhotos.forEach { staged ->
-                        val result = imageRepository.addImage(item.id, staged.sourceUri, staged.isPrimary)
-                        if (result is Result.Error) warning = PHOTO_SAVE_WARNING
-                    }
-                }
+                val warning = if (state.isEditMode) null else persistStagedPhotos(item.id, state.stagedPhotos)
 
                 _uiState.update {
                     it.copy(
@@ -270,5 +264,31 @@ class AddEditItemViewModel
                     )
                 }
             }
+        }
+
+        // imageRepository.addImage is documented to degrade to Result.Error rather than
+        // throw, but that's an implementation detail of one repository, not a guarantee the
+        // interface enforces — defending against it here means a violation can't crash this
+        // coroutine after the item itself already saved successfully, which would otherwise
+        // leave isSaving stuck true forever.
+        @Suppress("TooGenericExceptionCaught")
+        private suspend fun persistStagedPhotos(
+            itemId: ClothingId,
+            stagedPhotos: List<StagedPhoto>,
+        ): String? {
+            var warning: String? = null
+            stagedPhotos.forEach { staged ->
+                val result =
+                    try {
+                        imageRepository.addImage(itemId, staged.sourceUri, staged.isPrimary)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to add staged photo for item $itemId", e)
+                        Result.Error(e)
+                    }
+                if (result is Result.Error) warning = PHOTO_SAVE_WARNING
+            }
+            return warning
         }
     }

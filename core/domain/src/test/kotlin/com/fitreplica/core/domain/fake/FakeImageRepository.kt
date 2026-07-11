@@ -49,6 +49,14 @@ class FakeImageRepository : ImageRepository {
 
     override suspend fun deleteImage(imageId: String) {
         deletedImageIds += imageId
+        val deleted = images.value.find { it.id == imageId }
         images.value = images.value.filterNot { it.id == imageId }
+
+        if (deleted?.isPrimary == true) {
+            val next = images.value.filter { it.itemId == deleted.itemId }.minByOrNull { it.takenAt }
+            if (next != null) {
+                images.value = images.value.map { if (it.id == next.id) it.copy(isPrimary = true) else it }
+            }
+        }
     }
 }

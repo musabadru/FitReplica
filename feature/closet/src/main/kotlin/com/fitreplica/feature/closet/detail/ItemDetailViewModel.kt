@@ -22,6 +22,7 @@ import javax.inject.Inject
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 private const val PHOTO_SAVE_WARNING = "Couldn't save that photo (storage issue)."
+private const val PHOTO_ACTION_ERROR = "Couldn't update that photo. Try again."
 private const val DELETE_ERROR = "Couldn't delete this item. Try again."
 private const val TAG = "ItemDetailViewModel"
 
@@ -69,11 +70,9 @@ class ItemDetailViewModel
 
                 ItemDetailUiAction.OnDeleteConfirmed -> deleteItem()
 
-                is ItemDetailUiAction.OnSetPrimaryImage ->
-                    viewModelScope.launch { imageRepository.setPrimaryImage(itemId, action.imageId) }
+                is ItemDetailUiAction.OnSetPrimaryImage -> setPrimaryImage(action.imageId)
 
-                is ItemDetailUiAction.OnDeleteImage ->
-                    viewModelScope.launch { imageRepository.deleteImage(action.imageId) }
+                is ItemDetailUiAction.OnDeleteImage -> deleteImage(action.imageId)
 
                 is ItemDetailUiAction.OnPhotoAdded -> onPhotoAdded(action.sourceUri)
             }
@@ -91,6 +90,34 @@ class ItemDetailViewModel
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to delete item $itemId", e)
                     deleteErrorState.value = DELETE_ERROR
+                }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun setPrimaryImage(imageId: String) {
+            viewModelScope.launch {
+                try {
+                    imageRepository.setPrimaryImage(itemId, imageId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to set primary image $imageId for item $itemId", e)
+                    photoWarningState.value = PHOTO_ACTION_ERROR
+                }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun deleteImage(imageId: String) {
+            viewModelScope.launch {
+                try {
+                    imageRepository.deleteImage(imageId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to delete image $imageId for item $itemId", e)
+                    photoWarningState.value = PHOTO_ACTION_ERROR
                 }
             }
         }
