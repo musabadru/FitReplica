@@ -2,6 +2,7 @@ package com.fitreplica.core.database
 
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,6 +36,15 @@ class MigrationTest {
                  0, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
                 """.trimIndent(),
             )
+            // v1 has no `outfits` table, so this outfitId was never backed by a real
+            // outfit row — it must survive the migration with outfitId cleared, not
+            // throw a foreign-key violation or leave a dangling reference.
+            execSQL(
+                """
+                INSERT INTO wear_events (id, itemId, outfitId, dateTime, context, notes)
+                VALUES ('event-1', 'item-1', 'orphaned-outfit-id', 0, NULL, NULL)
+                """.trimIndent(),
+            )
             close()
         }
 
@@ -55,5 +65,10 @@ class MigrationTest {
                 cursor.getInt(0)
             }
         check(searchHits == 1) { "Expected FTS backfill to find the migrated row, found $searchHits" }
+
+        migratedDb.query("SELECT outfitId FROM wear_events WHERE id = 'event-1'").use { cursor ->
+            cursor.moveToFirst()
+            assertTrue("Expected the orphaned pre-v1 outfitId to be cleared", cursor.isNull(0))
+        }
     }
 }

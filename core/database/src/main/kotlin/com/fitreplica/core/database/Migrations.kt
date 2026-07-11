@@ -121,10 +121,14 @@ private fun addWearEventOutfitForeignKey(db: SupportSQLiteDatabase) {
         )
         """.trimIndent(),
     )
+    // outfitId is copied as NULL, not carried over verbatim: v1 had no `outfits` table at
+    // all, so any non-null value stored there could never reference a real outfit row —
+    // copying it as-is would either violate the new FK (if enforcement is on during the
+    // migration) or silently leave a dangling reference (if it's off).
     db.execSQL(
         """
         INSERT INTO `wear_events_new` (`id`, `itemId`, `outfitId`, `dateTime`, `context`, `notes`)
-        SELECT `id`, `itemId`, `outfitId`, `dateTime`, `context`, `notes` FROM `wear_events`
+        SELECT `id`, `itemId`, NULL, `dateTime`, `context`, `notes` FROM `wear_events`
         """.trimIndent(),
     )
     db.execSQL("DROP TABLE `wear_events`")
