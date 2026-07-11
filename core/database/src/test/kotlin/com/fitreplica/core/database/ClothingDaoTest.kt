@@ -20,6 +20,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 private const val WEAR_EVENT_TIME_MILLIS = 1_000L
+private const val SECOND_WEAR_EVENT_TIME_MILLIS = 2_000L
+private const val THIRD_WEAR_EVENT_TIME_MILLIS = 3_000L
 private const val COLUMN_ID = 0
 private const val COLUMN_ITEM_ID = 1
 private const val COLUMN_DATE_TIME = 2
@@ -78,6 +80,37 @@ class ClothingDaoTest {
         }
 
     @Test
+    fun `repeated logWear calls keep the counter and event count in lockstep`() =
+        runTest {
+            val item = clothingItem(id = "item-1")
+            dao.insertItem(item)
+
+            val eventTimes = listOf(WEAR_EVENT_TIME_MILLIS, SECOND_WEAR_EVENT_TIME_MILLIS, THIRD_WEAR_EVENT_TIME_MILLIS)
+            eventTimes.forEachIndexed { index, wornAt ->
+                dao.logWear(
+                    item.id,
+                    com.fitreplica.core.database.entity.WearEventEntity(
+                        id = WearEventId("event-$index"),
+                        itemId = item.id,
+                        outfitId = null,
+                        dateTime = wornAt,
+                        context = null,
+                        notes = null,
+                    ),
+                )
+            }
+
+            val updated = dao.observeItem(item.id).first()
+            assertEquals(eventTimes.size, updated?.timesWorn)
+            assertEquals(eventTimes.last(), updated?.lastWornAt)
+
+            database.query("SELECT COUNT(*) FROM wear_events WHERE itemId = ?", arrayOf(item.id.value)).use { cursor ->
+                cursor.moveToFirst()
+                assertEquals(eventTimes.size, cursor.getInt(0))
+            }
+        }
+
+    @Test
     fun `updateCondition changes only the condition column`() =
         runTest {
             val item = clothingItem(id = "item-1", condition = Condition.NEW)
@@ -88,6 +121,29 @@ class ClothingDaoTest {
             val updated = dao.observeItem(item.id).first()
             assertEquals(Condition.NEEDS_REPAIR, updated?.condition)
             assertEquals(item.name, updated?.name)
+        }
+
+    @Test
+    fun `updateItem replaces the stored row`() =
+        runTest {
+            val item = clothingItem(id = "item-1", name = "Original")
+            dao.insertItem(item)
+
+            dao.updateItem(item.copy(name = "Updated"))
+
+            val updated = dao.observeItem(item.id).first()
+            assertEquals("Updated", updated?.name)
+        }
+
+    @Test
+    fun `deleteItem removes the row`() =
+        runTest {
+            val item = clothingItem(id = "item-1")
+            dao.insertItem(item)
+
+            dao.deleteItem(item.id)
+
+            assertEquals(null, dao.observeItem(item.id).first())
         }
 
     @Test

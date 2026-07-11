@@ -37,7 +37,7 @@ private fun FitReplicaApp() {
     val navController = rememberNavController()
     Surface(modifier = Modifier.fillMaxSize()) {
         NavHost(navController = navController, startDestination = CLOSET_ROUTE) {
-            closetGraph()
+            closetGraph(navController)
             outfitGraph()
             historyGraph()
             laundryGraph()

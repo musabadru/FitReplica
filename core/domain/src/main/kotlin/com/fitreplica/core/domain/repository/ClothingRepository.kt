@@ -13,6 +13,10 @@ interface ClothingRepository {
 
     suspend fun addItem(item: ClothingItem)
 
+    suspend fun updateItem(item: ClothingItem)
+
+    suspend fun deleteItem(itemId: ClothingId)
+
     suspend fun logWear(
         itemId: ClothingId,
         outfitId: OutfitId?,

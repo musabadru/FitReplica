@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Covers context.filesDir/images/, used both by ImageRepositoryImpl's per-item
+         storage and by the closet feature's staging directory for in-progress captures
+         (an item that hasn't been saved yet has no ClothingId to store images under). -->
+    <files-path name="images" path="images/" />
+</paths>

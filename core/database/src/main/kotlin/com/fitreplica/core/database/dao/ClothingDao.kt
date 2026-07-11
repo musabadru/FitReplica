@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import com.fitreplica.core.database.entity.ClothingItemEntity
 import com.fitreplica.core.database.entity.WearEventEntity
 import com.fitreplica.core.model.ClothingId
@@ -16,6 +17,13 @@ import kotlinx.coroutines.flow.Flow
 abstract class ClothingDao {
     @Insert
     abstract suspend fun insertItem(item: ClothingItemEntity)
+
+    @Update
+    abstract suspend fun updateItem(item: ClothingItemEntity)
+
+    // Cascades to wear_events/images/outfit cross-refs via their existing FKs.
+    @Query("DELETE FROM clothing_items WHERE id = :itemId")
+    abstract suspend fun deleteItem(itemId: ClothingId)
 
     @Query("SELECT * FROM clothing_items WHERE id = :itemId")
     abstract fun observeItem(itemId: ClothingId): Flow<ClothingItemEntity?>

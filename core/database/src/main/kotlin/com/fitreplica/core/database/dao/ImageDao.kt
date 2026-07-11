@@ -50,6 +50,9 @@ abstract class ImageDao {
     @Query("SELECT * FROM images WHERE itemId = :itemId ORDER BY takenAt ASC")
     abstract fun observeImagesForItem(itemId: ClothingId): Flow<List<ImageEntity>>
 
+    @Query("SELECT * FROM images WHERE id = :imageId")
+    abstract suspend fun findById(imageId: String): ImageEntity?
+
     @Query("DELETE FROM images WHERE id = :imageId")
     abstract suspend fun deleteImage(imageId: String)
 }

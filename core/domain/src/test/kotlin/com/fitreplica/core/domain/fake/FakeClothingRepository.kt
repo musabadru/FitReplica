@@ -24,6 +24,14 @@ class FakeClothingRepository : ClothingRepository {
         items.value = items.value + item
     }
 
+    override suspend fun updateItem(item: ClothingItem) {
+        items.value = items.value.map { if (it.id == item.id) item else it }
+    }
+
+    override suspend fun deleteItem(itemId: ClothingId) {
+        items.value = items.value.filterNot { it.id == itemId }
+    }
+
     override suspend fun logWear(
         itemId: ClothingId,
         outfitId: OutfitId?,

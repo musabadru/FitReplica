@@ -5,6 +5,13 @@ naming:
 complexity:
   TooManyFunctions:
     thresholdInClasses: 20
+  # Compose UI functions are naturally verbose (declarative nesting) and take one
+  # parameter per piece of state/callback a screen needs — neither threshold maps to
+  # real complexity the way it does for ordinary functions.
+  LongMethod:
+    ignoreAnnotated: ["Composable"]
+  LongParameterList:
+    ignoreAnnotated: ["Composable"]
 
 style:
   MagicNumber:
