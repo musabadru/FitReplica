@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/musabadru/FitReplica/compare/v0.2.0...v0.3.0) (2026-07-11)
+
+
+### Features
+
+* build out Room v1 schema, FTS4 search, and domain layer for Phase 1 ([cad45cc](https://github.com/musabadru/FitReplica/commit/cad45cc6f5bf82264417d3b284f992ed5a8e1426))
+* Room v1 schema, FTS4 search, and domain layer (Phase 1 foundation) ([#46](https://github.com/musabadru/FitReplica/issues/46)) ([43ce49a](https://github.com/musabadru/FitReplica/commit/43ce49a51d6be78886e90df15501c8478b872c2c))
+
+
+### Bug Fixes
+
+* add missing wear_events -&gt; outfits FK and expand cascade test coverage ([5099147](https://github.com/musabadru/FitReplica/commit/50991476bade40c4e1870b649ac35b9b6f06fe57))
+* address code review findings on PR [#46](https://github.com/musabadru/FitReplica/issues/46) ([e5f785a](https://github.com/musabadru/FitReplica/commit/e5f785a035fa7a08771ea076548c34cd007eef6c))
+* clear outfitId instead of copying it during wear_events migration ([e748b8a](https://github.com/musabadru/FitReplica/commit/e748b8a712a451c533bde5b25a6a60653967072f))
+* scope ImageDao.markPrimary's update to the requested item ([26d984e](https://github.com/musabadru/FitReplica/commit/26d984eb1155ae7710eb24fe396b4ba90765d247))
+* scope ImageDao.markPrimary's update to the requested item ([#48](https://github.com/musabadru/FitReplica/issues/48)) ([d233f78](https://github.com/musabadru/FitReplica/commit/d233f78f65447ef465ae324eb6b892dac3dfa130))
+* treat punctuation as a search-term separator, not deleted noise ([6679d90](https://github.com/musabadru/FitReplica/commit/6679d90a7e17e5e440b5aa92f379d501f1fd16a8))
+
 ## [0.2.0](https://github.com/musabadru/FitReplica/compare/v0.1.0...v0.2.0) (2026-07-11)
 
 
