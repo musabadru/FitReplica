@@ -116,6 +116,7 @@ abstract class ClothingDao {
         val snapshot = requireNotNull(wearItemSnapshot(itemId))
         insertWearEvent(
             event.copy(
+                itemId = itemId,
                 itemName = snapshot.itemName,
                 itemType = snapshot.itemType,
                 colorPrimary = snapshot.colorPrimary,

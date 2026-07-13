@@ -111,6 +111,34 @@ class ClothingDaoTest {
         }
 
     @Test
+    fun `logWear keeps event relation snapshot and counter on the requested item`() =
+        runTest {
+            val requestedItem = clothingItem(id = "item-1", name = "Blue Jacket", type = ClothingType.OUTERWEAR)
+            val staleEventItem = clothingItem(id = "item-2", name = "White Sneakers", type = ClothingType.SHOES)
+            dao.insertItem(requestedItem)
+            dao.insertItem(staleEventItem)
+
+            dao.logWear(
+                requestedItem.id,
+                com.fitreplica.core.database.entity.WearEventEntity(
+                    id = WearEventId("event-1"),
+                    itemId = staleEventItem.id,
+                    outfitId = null,
+                    dateTime = WEAR_EVENT_TIME_MILLIS,
+                    context = null,
+                    notes = null,
+                ),
+            )
+
+            val history = dao.observeWearHistory().first()
+
+            assertEquals(requestedItem.id, history.single().itemId)
+            assertEquals("Blue Jacket", history.single().itemName)
+            assertEquals(1, dao.observeItem(requestedItem.id).first()?.timesWorn)
+            assertEquals(0, dao.observeItem(staleEventItem.id).first()?.timesWorn)
+        }
+
+    @Test
     fun `observeWearHistory snapshots item display data and sorts newest first`() =
         runTest {
             val jacket = clothingItem(id = "jacket-1", name = "Blue Jacket", type = ClothingType.OUTERWEAR)

@@ -10,4 +10,6 @@ internal sealed interface HistoryUiAction {
     data object OnPreviousMonthClicked : HistoryUiAction
 
     data object OnNextMonthClicked : HistoryUiAction
+
+    data object OnRetryClicked : HistoryUiAction
 }

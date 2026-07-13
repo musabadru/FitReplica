@@ -83,9 +83,9 @@ private fun HistoryContent(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             uiState.errorMessage != null ->
-                WardrobeEmptyState(
+                HistoryErrorState(
                     message = uiState.errorMessage,
-                    modifier = Modifier.fillMaxSize(),
+                    onRetry = { onAction(HistoryUiAction.OnRetryClicked) },
                 )
             uiState.entries.isEmpty() ->
                 WardrobeEmptyState(
@@ -96,6 +96,23 @@ private fun HistoryContent(
                 TimelineContent(groups = uiState.timelineGroups)
             else ->
                 CalendarContent(uiState = uiState, onAction = onAction)
+        }
+    }
+}
+
+@Composable
+private fun HistoryErrorState(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        WardrobeEmptyState(message = message, modifier = Modifier.fillMaxWidth())
+        TextButton(onClick = onRetry) {
+            Text("Retry")
         }
     }
 }

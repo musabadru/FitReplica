@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
@@ -150,7 +151,7 @@ class HistoryViewModelTest {
                 HistoryViewModel(
                     FakeHistoryRepository(
                         entries = emptyList(),
-                        error = IllegalStateException("boom"),
+                        failuresBeforeSuccess = 1,
                     ),
                 )
             backgroundScope.launch { viewModel.uiState.collect {} }
@@ -160,21 +161,52 @@ class HistoryViewModelTest {
             assertEquals("Unable to load wear history. Please try again.", viewModel.uiState.value.errorMessage)
         }
 
+    @Test
+    fun `retry action resubscribes after repository failure`() =
+        runTest(dispatcher) {
+            val today = LocalDate.now()
+            val viewModel =
+                HistoryViewModel(
+                    FakeHistoryRepository(
+                        entries = listOf(historyEntry("event-1", "Blue Jacket", atStartOfDay(today))),
+                        failuresBeforeSuccess = 1,
+                    ),
+                )
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            assertEquals("Unable to load wear history. Please try again.", viewModel.uiState.value.errorMessage)
+
+            viewModel.onAction(HistoryUiAction.OnRetryClicked)
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.errorMessage)
+            assertEquals(listOf("Blue Jacket"), viewModel.uiState.value.entries.map { it.itemName })
+        }
+
     private fun atStartOfDay(date: LocalDate): Long =
         date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
 private class FakeHistoryRepository(
     entries: List<WearHistoryEntry>,
-    private val error: Throwable? = null,
+    failuresBeforeSuccess: Int = 0,
 ) : ClothingRepository {
     private val history = MutableStateFlow(entries)
+    private var remainingFailures = failuresBeforeSuccess
 
     override fun observeItems(filter: ClosetFilter): Flow<List<ClothingItem>> = emptyFlow()
 
     override fun observeItem(itemId: ClothingId): Flow<ClothingItem?> = emptyFlow()
 
-    override fun observeWearHistory(): Flow<List<WearHistoryEntry>> = error?.let { flow { throw it } } ?: history
+    override fun observeWearHistory(): Flow<List<WearHistoryEntry>> =
+        flow {
+            if (remainingFailures > 0) {
+                remainingFailures -= 1
+                error("boom")
+            }
+            emitAll(history)
+        }
 
     override suspend fun addItem(item: ClothingItem) = Unit
 

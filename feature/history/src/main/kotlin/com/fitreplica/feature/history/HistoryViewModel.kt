@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.model.WearHistoryEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -24,6 +26,7 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
 private const val DAYS_IN_WEEK = 7
 private const val HISTORY_ERROR_MESSAGE = "Unable to load wear history. Please try again."
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HistoryViewModel
     @Inject
@@ -33,11 +36,14 @@ class HistoryViewModel
         private val modeState = MutableStateFlow(HistoryMode.TIMELINE)
         private val visibleMonthState = MutableStateFlow(YearMonth.now())
         private val selectedDateState = MutableStateFlow(LocalDate.now())
+        private val retryState = MutableStateFlow(0)
         private val historyResult =
-            clothingRepository
-                .observeWearHistory()
-                .map<List<WearHistoryEntry>, WearHistoryResult> { WearHistoryResult.Success(it) }
-                .catch { emit(WearHistoryResult.Error) }
+            retryState.flatMapLatest {
+                clothingRepository
+                    .observeWearHistory()
+                    .map<List<WearHistoryEntry>, WearHistoryResult> { WearHistoryResult.Success(it) }
+                    .catch { emit(WearHistoryResult.Error) }
+            }
 
         internal val uiState =
             combine(
@@ -88,6 +94,8 @@ class HistoryViewModel
                     moveVisibleMonthBy(-1)
                 HistoryUiAction.OnNextMonthClicked ->
                     moveVisibleMonthBy(1)
+                HistoryUiAction.OnRetryClicked ->
+                    retryState.update { retryCount -> retryCount.inc() }
             }
         }
 
