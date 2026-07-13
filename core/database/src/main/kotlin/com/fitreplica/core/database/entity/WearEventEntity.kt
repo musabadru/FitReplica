@@ -1,10 +1,12 @@
 package com.fitreplica.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.fitreplica.core.model.ClothingId
+import com.fitreplica.core.model.ClothingType
 import com.fitreplica.core.model.OutfitId
 import com.fitreplica.core.model.WearEventId
 
@@ -26,7 +28,7 @@ import com.fitreplica.core.model.WearEventId
             onDelete = ForeignKey.SET_NULL,
         ),
     ],
-    indices = [Index("itemId"), Index("outfitId")],
+    indices = [Index("itemId"), Index("outfitId"), Index("dateTime")],
 )
 data class WearEventEntity(
     @PrimaryKey val id: WearEventId,
@@ -35,4 +37,7 @@ data class WearEventEntity(
     val dateTime: Long,
     val context: String?,
     val notes: String?,
+    @ColumnInfo(defaultValue = "''") val itemName: String = "",
+    @ColumnInfo(defaultValue = "'OTHER'") val itemType: ClothingType = ClothingType.OTHER,
+    @ColumnInfo(defaultValue = "''") val colorPrimary: String = "",
 )

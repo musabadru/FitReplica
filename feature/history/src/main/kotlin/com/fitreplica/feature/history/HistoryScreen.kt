@@ -1,5 +1,6 @@
 package com.fitreplica.feature.history
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +82,11 @@ private fun HistoryContent(
                 Box(modifier = Modifier.fillMaxSize()) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
+            uiState.errorMessage != null ->
+                WardrobeEmptyState(
+                    message = uiState.errorMessage,
+                    modifier = Modifier.fillMaxSize(),
+                )
             uiState.entries.isEmpty() ->
                 WardrobeEmptyState(
                     message = "No wear history yet — tap “Wear now” on an item to start building your timeline.",
@@ -168,6 +174,9 @@ private fun CalendarContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            items(uiState.calendarLeadingBlankCount, key = { "blank-$it" }) {
+                Box(modifier = Modifier.fillMaxWidth())
+            }
             items(uiState.calendarDays, key = { it.date.toString() }) { day ->
                 CalendarDayCell(
                     day = day,
@@ -202,8 +211,9 @@ private fun CalendarDayCell(
     day: HistoryCalendarDay,
     onClick: () -> Unit,
 ) {
-    WardrobeCard(modifier = Modifier.fillMaxWidth()) {
+    WardrobeCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -217,12 +227,11 @@ private fun CalendarDayCell(
                         MaterialTheme.colorScheme.onSurface
                     },
             )
-            TextButton(onClick = onClick) {
-                Text(
-                    text = if (day.wearCount == 0) "—" else day.wearCount.toString(),
-                    textAlign = TextAlign.Center,
-                )
-            }
+            Text(
+                text = if (day.wearCount == 0) "—" else day.wearCount.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

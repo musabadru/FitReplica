@@ -12,9 +12,11 @@ internal data class HistoryUiState(
     val timelineGroups: List<HistoryDayGroup> = emptyList(),
     val visibleMonth: YearMonth = YearMonth.now(),
     val selectedDate: LocalDate = LocalDate.now(),
+    val calendarLeadingBlankCount: Int = 0,
     val calendarDays: List<HistoryCalendarDay> = emptyList(),
     val selectedDayEntries: List<WearHistoryEntry> = emptyList(),
     val isLoading: Boolean = true,
+    val errorMessage: String? = null,
 )
 
 internal data class HistoryDayGroup(

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.fitreplica.core.database.AppDatabase
 import com.fitreplica.core.database.MIGRATION_1_2
+import com.fitreplica.core.database.MIGRATION_2_3
 import com.fitreplica.core.database.dao.ClothingDao
 import com.fitreplica.core.database.dao.ImageDao
 import com.fitreplica.core.database.dao.LaundryDao
@@ -24,7 +25,7 @@ object DatabaseModule {
         @ApplicationContext context: Context,
     ): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "fitreplica.db")
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 
     @Provides

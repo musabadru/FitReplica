@@ -21,6 +21,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+private const val WEAR_TIME_MILLIS = 1_000L
+
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ClothingRepositoryImplTest {
@@ -86,7 +88,7 @@ class ClothingRepositoryImplTest {
                     id = WearEventId("event-1"),
                     itemId = item.id,
                     outfitId = null,
-                    dateTime = 1_000L,
+                    dateTime = WEAR_TIME_MILLIS,
                     context = "date night",
                     notes = "felt good",
                 ),
@@ -95,6 +97,7 @@ class ClothingRepositoryImplTest {
             val history = repository.observeWearHistory().first()
 
             assertEquals(listOf(WearEventId("event-1")), history.map { it.id })
+            assertEquals(WEAR_TIME_MILLIS, history.single().wornAt)
             assertEquals("Blue Nike Jacket", history.single().itemName)
             assertEquals(ClothingType.OUTERWEAR, history.single().itemType)
             assertEquals("date night", history.single().context)

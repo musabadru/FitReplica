@@ -111,7 +111,7 @@ class ClothingDaoTest {
         }
 
     @Test
-    fun `observeWearHistory joins item display data and sorts newest first`() =
+    fun `observeWearHistory snapshots item display data and sorts newest first`() =
         runTest {
             val jacket = clothingItem(id = "jacket-1", name = "Blue Jacket", type = ClothingType.OUTERWEAR)
             val sneakers = clothingItem(id = "sneaker-1", name = "White Sneakers", type = ClothingType.SHOES)
@@ -140,12 +140,22 @@ class ClothingDaoTest {
                     notes = null,
                 ),
             )
+            dao.updateItem(
+                sneakers.copy(
+                    name = "Renamed Sneakers",
+                    type = ClothingType.ACCESSORY,
+                    colorPrimary = "red",
+                ),
+            )
 
             val history = dao.observeWearHistory().first()
 
             assertEquals(listOf(WearEventId("event-newer"), WearEventId("event-older")), history.map { it.id })
+            assertEquals(SECOND_WEAR_EVENT_TIME_MILLIS, history.first().wornAt)
+            assertEquals(WEAR_EVENT_TIME_MILLIS, history.last().wornAt)
             assertEquals("White Sneakers", history.first().itemName)
             assertEquals(ClothingType.SHOES, history.first().itemType)
+            assertEquals("blue", history.first().colorPrimary)
             assertEquals("weekend", history.first().context)
             assertEquals("first wear", history.last().notes)
         }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -103,11 +104,60 @@ class HistoryViewModelTest {
             advanceUntilIdle()
 
             assertEquals(initialMonth.minusMonths(1), viewModel.uiState.value.visibleMonth)
+            assertEquals(initialMonth.minusMonths(1), java.time.YearMonth.from(viewModel.uiState.value.selectedDate))
 
             viewModel.onAction(HistoryUiAction.OnNextMonthClicked)
             advanceUntilIdle()
 
             assertEquals(initialMonth, viewModel.uiState.value.visibleMonth)
+            assertEquals(initialMonth, java.time.YearMonth.from(viewModel.uiState.value.selectedDate))
+        }
+
+    @Test
+    fun `mode changed action switches from timeline to calendar`() =
+        runTest(dispatcher) {
+            val viewModel = HistoryViewModel(FakeHistoryRepository(emptyList()))
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(HistoryMode.TIMELINE, viewModel.uiState.value.mode)
+
+            viewModel.onAction(HistoryUiAction.OnModeChanged(HistoryMode.CALENDAR))
+            advanceUntilIdle()
+
+            assertEquals(HistoryMode.CALENDAR, viewModel.uiState.value.mode)
+        }
+
+    @Test
+    fun `date selected action updates selected date and visible month`() =
+        runTest(dispatcher) {
+            val viewModel = HistoryViewModel(FakeHistoryRepository(emptyList()))
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+            val selectedDate = LocalDate.now().minusMonths(2).withDayOfMonth(1)
+
+            viewModel.onAction(HistoryUiAction.OnDateSelected(selectedDate))
+            advanceUntilIdle()
+
+            assertEquals(selectedDate, viewModel.uiState.value.selectedDate)
+            assertEquals(java.time.YearMonth.from(selectedDate), viewModel.uiState.value.visibleMonth)
+        }
+
+    @Test
+    fun `repository failure emits recoverable error state`() =
+        runTest(dispatcher) {
+            val viewModel =
+                HistoryViewModel(
+                    FakeHistoryRepository(
+                        entries = emptyList(),
+                        error = IllegalStateException("boom"),
+                    ),
+                )
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(false, viewModel.uiState.value.isLoading)
+            assertEquals("Unable to load wear history. Please try again.", viewModel.uiState.value.errorMessage)
         }
 
     private fun atStartOfDay(date: LocalDate): Long =
@@ -116,6 +166,7 @@ class HistoryViewModelTest {
 
 private class FakeHistoryRepository(
     entries: List<WearHistoryEntry>,
+    private val error: Throwable? = null,
 ) : ClothingRepository {
     private val history = MutableStateFlow(entries)
 
@@ -123,7 +174,7 @@ private class FakeHistoryRepository(
 
     override fun observeItem(itemId: ClothingId): Flow<ClothingItem?> = emptyFlow()
 
-    override fun observeWearHistory(): Flow<List<WearHistoryEntry>> = history
+    override fun observeWearHistory(): Flow<List<WearHistoryEntry>> = error?.let { flow { throw it } } ?: history
 
     override suspend fun addItem(item: ClothingItem) = Unit
 
