@@ -111,6 +111,46 @@ class ClothingDaoTest {
         }
 
     @Test
+    fun `observeWearHistory joins item display data and sorts newest first`() =
+        runTest {
+            val jacket = clothingItem(id = "jacket-1", name = "Blue Jacket", type = ClothingType.OUTERWEAR)
+            val sneakers = clothingItem(id = "sneaker-1", name = "White Sneakers", type = ClothingType.SHOES)
+            dao.insertItem(jacket)
+            dao.insertItem(sneakers)
+
+            dao.logWear(
+                jacket.id,
+                com.fitreplica.core.database.entity.WearEventEntity(
+                    id = WearEventId("event-older"),
+                    itemId = jacket.id,
+                    outfitId = null,
+                    dateTime = WEAR_EVENT_TIME_MILLIS,
+                    context = "work",
+                    notes = "first wear",
+                ),
+            )
+            dao.logWear(
+                sneakers.id,
+                com.fitreplica.core.database.entity.WearEventEntity(
+                    id = WearEventId("event-newer"),
+                    itemId = sneakers.id,
+                    outfitId = null,
+                    dateTime = SECOND_WEAR_EVENT_TIME_MILLIS,
+                    context = "weekend",
+                    notes = null,
+                ),
+            )
+
+            val history = dao.observeWearHistory().first()
+
+            assertEquals(listOf(WearEventId("event-newer"), WearEventId("event-older")), history.map { it.id })
+            assertEquals("White Sneakers", history.first().itemName)
+            assertEquals(ClothingType.SHOES, history.first().itemType)
+            assertEquals("weekend", history.first().context)
+            assertEquals("first wear", history.last().notes)
+        }
+
+    @Test
     fun `updateCondition changes only the condition column`() =
         runTest {
             val item = clothingItem(id = "item-1", condition = Condition.NEW)

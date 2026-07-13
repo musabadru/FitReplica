@@ -6,6 +6,8 @@ import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.OutfitId
+import com.fitreplica.core.model.WearHistoryEntry
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
@@ -28,6 +30,8 @@ class FakeClothingRepository : ClothingRepository {
         }
 
     override fun observeItem(itemId: ClothingId) = items.map { list -> list.find { it.id == itemId } }
+
+    override fun observeWearHistory(): Flow<List<WearHistoryEntry>> = MutableStateFlow(emptyList())
 
     override suspend fun addItem(item: ClothingItem) {
         items.value = items.value + item

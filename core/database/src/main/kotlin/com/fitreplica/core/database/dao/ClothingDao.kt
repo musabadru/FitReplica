@@ -31,6 +31,25 @@ abstract class ClothingDao {
     @Query("SELECT * FROM clothing_items ORDER BY addedAt DESC")
     abstract fun observeItems(): Flow<List<ClothingItemEntity>>
 
+    @Query(
+        """
+        SELECT
+            wear_events.id AS id,
+            wear_events.itemId AS itemId,
+            clothing_items.name AS itemName,
+            clothing_items.type AS itemType,
+            clothing_items.colorPrimary AS colorPrimary,
+            wear_events.outfitId AS outfitId,
+            wear_events.dateTime AS wornAt,
+            wear_events.context AS context,
+            wear_events.notes AS notes
+        FROM wear_events
+        INNER JOIN clothing_items ON clothing_items.id = wear_events.itemId
+        ORDER BY wear_events.dateTime DESC
+        """,
+    )
+    abstract fun observeWearHistory(): Flow<List<WearHistoryRow>>
+
     // Structured filters only — combined with FTS search in searchItems below.
     // Nullable-bind pattern (`:x IS NULL OR column = :x`) lets one query serve every
     // filter combination without building a query at runtime.

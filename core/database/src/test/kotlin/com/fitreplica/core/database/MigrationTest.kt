@@ -1,6 +1,7 @@
 package com.fitreplica.core.database
 
 import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -19,11 +20,20 @@ class MigrationTest {
         MigrationTestHelper(
             InstrumentationRegistry.getInstrumentation(),
             AppDatabase::class.java,
+            emptyList(),
+            FrameworkSQLiteOpenHelperFactory(),
         )
 
     @Test
     fun `migrate 1 to 2 preserves existing rows and adds FTS search`() {
-        helper.createDatabase(TEST_DB, 1).apply {
+        val testDbPath =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+                .getDatabasePath(TEST_DB)
+                .absolutePath
+
+        helper.createDatabase(testDbPath, 1).apply {
             execSQL(
                 """
                 INSERT INTO clothing_items
@@ -48,7 +58,7 @@ class MigrationTest {
             close()
         }
 
-        val migratedDb = helper.runMigrationsAndValidate(TEST_DB, 2, true, MIGRATION_1_2)
+        val migratedDb = helper.runMigrationsAndValidate(testDbPath, 2, true, MIGRATION_1_2)
 
         val itemCount =
             migratedDb.query("SELECT COUNT(*) FROM clothing_items").use { cursor ->

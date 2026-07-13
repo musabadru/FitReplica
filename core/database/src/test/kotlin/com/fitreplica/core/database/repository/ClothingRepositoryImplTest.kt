@@ -3,12 +3,14 @@ package com.fitreplica.core.database.repository
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.fitreplica.core.database.AppDatabase
+import com.fitreplica.core.database.entity.WearEventEntity
 import com.fitreplica.core.domain.repository.ClosetFilter
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.ClothingType
 import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.Status
+import com.fitreplica.core.model.WearEventId
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -71,6 +73,32 @@ class ClothingRepositoryImplTest {
             val results = repository.observeItems(ClosetFilter(searchQuery = "nike-jacket")).first()
 
             assertEquals(listOf(ClothingId("item-1")), results.map { it.id })
+        }
+
+    @Test
+    fun `observeWearHistory maps joined wear events to domain entries`() =
+        runTest {
+            val item = sampleItem()
+            repository.addItem(item)
+            database.clothingDao().logWear(
+                item.id,
+                WearEventEntity(
+                    id = WearEventId("event-1"),
+                    itemId = item.id,
+                    outfitId = null,
+                    dateTime = 1_000L,
+                    context = "date night",
+                    notes = "felt good",
+                ),
+            )
+
+            val history = repository.observeWearHistory().first()
+
+            assertEquals(listOf(WearEventId("event-1")), history.map { it.id })
+            assertEquals("Blue Nike Jacket", history.single().itemName)
+            assertEquals(ClothingType.OUTERWEAR, history.single().itemType)
+            assertEquals("date night", history.single().context)
+            assertEquals("felt good", history.single().notes)
         }
 
     private fun sampleItem() =
