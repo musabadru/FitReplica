@@ -2,6 +2,7 @@ package com.fitreplica.core.domain.usecase
 
 import com.fitreplica.core.domain.fake.FakeClothingRepository
 import com.fitreplica.core.domain.fake.sampleClothingItem
+import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.OutfitId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -33,5 +34,18 @@ class LogWearEventUseCaseTest {
             useCase(item.id)
 
             assertEquals(Triple(item.id, null, null), repository.wearLog.single())
+        }
+
+    @Test
+    fun `does not log wear for retired item`() =
+        runTest {
+            val repository = FakeClothingRepository()
+            val item = sampleClothingItem(condition = Condition.RETIRED)
+            repository.addItem(item)
+            val useCase = LogWearEventUseCase(repository)
+
+            useCase(item.id)
+
+            assertEquals(0, repository.wearLog.size)
         }
 }

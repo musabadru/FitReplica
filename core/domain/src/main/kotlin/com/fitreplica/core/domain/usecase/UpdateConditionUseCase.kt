@@ -13,7 +13,8 @@ class UpdateConditionUseCase
         suspend operator fun invoke(
             itemId: ClothingId,
             condition: Condition,
+            notes: String? = null,
         ) {
-            clothingRepository.updateCondition(itemId, condition)
+            clothingRepository.updateCondition(itemId, condition, notes)
         }
     }

@@ -39,3 +39,4 @@ include(":avatar:api")
 
 include(":metadata:api")
 include(":metadata:impl-noop")
+include(":metadata:impl-caretag-ocr")

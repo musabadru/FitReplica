@@ -6,6 +6,7 @@ import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.ClothingType
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEvent
 import com.fitreplica.core.model.OutfitId
 import com.fitreplica.core.model.WearEventId
 import com.fitreplica.core.model.WearHistoryEntry
@@ -223,7 +224,10 @@ private class FakeHistoryRepository(
     override suspend fun updateCondition(
         itemId: ClothingId,
         condition: Condition,
+        notes: String?,
     ) = Unit
+
+    override fun observeConditionEvents(itemId: ClothingId): Flow<List<ConditionEvent>> = emptyFlow()
 }
 
 private fun historyEntry(

@@ -3,18 +3,24 @@ package com.fitreplica.core.database.repository
 import com.fitreplica.core.database.dao.ClothingDao
 import com.fitreplica.core.database.dao.WearHistoryRow
 import com.fitreplica.core.database.entity.ClothingItemEntity
+import com.fitreplica.core.database.entity.ConditionEventEntity
 import com.fitreplica.core.database.entity.WearEventEntity
 import com.fitreplica.core.domain.repository.ClosetFilter
 import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEvent
+import com.fitreplica.core.model.ConditionEventId
 import com.fitreplica.core.model.OutfitId
 import com.fitreplica.core.model.WearEventId
 import com.fitreplica.core.model.WearHistoryEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
+
+private const val CONDITION_EVENT_SEQUENCE_WIDTH = 12
 
 class ClothingRepositoryImpl
     @Inject
@@ -84,10 +90,37 @@ class ClothingRepositoryImpl
         override suspend fun updateCondition(
             itemId: ClothingId,
             condition: Condition,
+            notes: String?,
         ) {
-            clothingDao.updateCondition(itemId, condition)
+            val changedAt = System.currentTimeMillis()
+            clothingDao.updateCondition(
+                itemId = itemId,
+                event =
+                    ConditionEventEntity(
+                        id = newConditionEventId(changedAt),
+                        itemId = itemId,
+                        previousCondition = condition,
+                        newCondition = condition,
+                        changedAt = changedAt,
+                        notes = notes,
+                    ),
+            )
         }
+
+        override fun observeConditionEvents(itemId: ClothingId): Flow<List<ConditionEvent>> =
+            clothingDao.observeConditionEvents(itemId).map { list -> list.map { it.toDomain() } }
     }
+
+private val conditionEventSequence = AtomicLong()
+
+private fun newConditionEventId(changedAt: Long): ConditionEventId =
+    ConditionEventId(
+        "$changedAt-${
+            conditionEventSequence.incrementAndGet()
+                .toString()
+                .padStart(CONDITION_EVENT_SEQUENCE_WIDTH, '0')
+        }",
+    )
 
 // "blue nike jacket" -> "blue* nike* jacket*": each term becomes an FTS4 prefix match
 // so partial words find results, matching the free-text search behaviour from §3.1.
@@ -105,7 +138,7 @@ private fun String.toFtsQuery(): String =
         .filter { it.isNotBlank() }
         .joinToString(separator = " ") { term -> "$term*" }
 
-private fun ClothingItemEntity.toDomain(): ClothingItem =
+internal fun ClothingItemEntity.toDomain(): ClothingItem =
     ClothingItem(
         id = id,
         name = name,
@@ -159,5 +192,15 @@ private fun ClothingItem.toEntity(): ClothingItemEntity =
         purchasePrice = purchasePrice,
         purchaseDate = purchaseDate,
         purchaseLocation = purchaseLocation,
+        notes = notes,
+    )
+
+private fun ConditionEventEntity.toDomain(): ConditionEvent =
+    ConditionEvent(
+        id = id,
+        itemId = itemId,
+        previousCondition = previousCondition,
+        newCondition = newCondition,
+        changedAt = changedAt,
         notes = notes,
     )

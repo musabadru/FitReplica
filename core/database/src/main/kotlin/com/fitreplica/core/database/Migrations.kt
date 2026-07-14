@@ -5,6 +5,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 private const val DATABASE_VERSION_2 = 2
 private const val DATABASE_VERSION_3 = 3
+private const val DATABASE_VERSION_4 = 4
 
 // Adds the rest of the v1 schema (outfits, laundry loads, images, FTS4 search) on top
 // of the Phase 0 subset (clothing_items, wear_events). Purely additive — no existing
@@ -30,6 +31,46 @@ val MIGRATION_2_3 =
             addWearEventSnapshotFields(db)
         }
     }
+
+val MIGRATION_3_4 =
+    object : Migration(DATABASE_VERSION_3, DATABASE_VERSION_4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            createConditionEventsTable(db)
+        }
+    }
+
+private fun createConditionEventsTable(db: SupportSQLiteDatabase) {
+    db.execSQL(
+        """
+        CREATE TABLE IF NOT EXISTS `condition_events` (
+            `id` TEXT NOT NULL,
+            `itemId` TEXT NOT NULL,
+            `previousCondition` TEXT NOT NULL,
+            `newCondition` TEXT NOT NULL,
+            `changedAt` INTEGER NOT NULL,
+            `notes` TEXT,
+            PRIMARY KEY(`id`),
+            FOREIGN KEY(`itemId`) REFERENCES `clothing_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+        )
+        """.trimIndent(),
+    )
+    createConditionEventIndexes(db)
+}
+
+private fun createConditionEventIndexes(db: SupportSQLiteDatabase) {
+    db.execSQL(
+        """
+        CREATE INDEX IF NOT EXISTS `index_condition_events_itemId_changedAt_id`
+        ON `condition_events` (`itemId`, `changedAt`, `id`)
+        """.trimIndent(),
+    )
+    db.execSQL(
+        """
+        CREATE INDEX IF NOT EXISTS `index_condition_events_changedAt_id`
+        ON `condition_events` (`changedAt`, `id`)
+        """.trimIndent(),
+    )
+}
 
 private fun createOutfitTables(db: SupportSQLiteDatabase) {
     db.execSQL(

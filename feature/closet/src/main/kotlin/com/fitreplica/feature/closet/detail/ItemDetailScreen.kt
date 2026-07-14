@@ -52,6 +52,7 @@ import coil.compose.AsyncImage
 import com.fitreplica.core.designsystem.component.WardrobeStatusBadge
 import com.fitreplica.core.designsystem.theme.WardrobeExpressiveCtaShape
 import com.fitreplica.core.model.ClothingItem
+import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.Image
 import com.fitreplica.feature.closet.photo.rememberPhotoLaunchers
 
@@ -66,6 +67,7 @@ fun ItemDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showRetireConfirm by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val photoLaunchers =
         rememberPhotoLaunchers(onPhotoReady = { viewModel.onAction(ItemDetailUiAction.OnPhotoAdded(it)) })
@@ -80,6 +82,10 @@ fun ItemDetailScreen(
 
     LaunchedEffect(uiState.deleteError) {
         uiState.deleteError?.let { error -> snackbarHostState.showSnackbar(error) }
+    }
+
+    LaunchedEffect(uiState.conditionError) {
+        uiState.conditionError?.let { error -> snackbarHostState.showSnackbar(error) }
     }
 
     Scaffold(
@@ -135,8 +141,19 @@ fun ItemDetailScreen(
                     TextButton(onClick = photoLaunchers.pick) { Text("Gallery") }
                 }
                 ItemDetails(item)
+                ConditionActions(
+                    currentCondition = item.condition,
+                    onConditionSelected = { condition ->
+                        if (condition == Condition.RETIRED) {
+                            showRetireConfirm = true
+                        } else {
+                            viewModel.onAction(ItemDetailUiAction.OnConditionSelected(condition))
+                        }
+                    },
+                )
                 Button(
                     onClick = { viewModel.onAction(ItemDetailUiAction.OnWearNowClicked) },
+                    enabled = item.condition != Condition.RETIRED,
                     shape = WardrobeExpressiveCtaShape,
                     colors = ButtonDefaults.buttonColors(),
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -160,6 +177,23 @@ fun ItemDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showRetireConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRetireConfirm = false },
+            title = { Text("Retire item?") },
+            text = { Text("Retired items stay in history but are removed from active outfit and laundry flows.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRetireConfirm = false
+                    viewModel.onAction(ItemDetailUiAction.OnConditionSelected(Condition.RETIRED))
+                }) { Text("Retire") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRetireConfirm = false }) { Text("Cancel") }
             },
         )
     }
@@ -248,6 +282,30 @@ private fun ItemDetails(item: ClothingItem) {
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun ConditionActions(
+    currentCondition: Condition,
+    onConditionSelected: (Condition) -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text("Condition", style = MaterialTheme.typography.titleMedium)
+        LazyRow(
+            contentPadding = PaddingValues(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(Condition.entries) { condition ->
+                val selected = condition == currentCondition
+                TextButton(
+                    onClick = { onConditionSelected(condition) },
+                    enabled = !selected,
+                ) {
+                    Text(if (selected) "${condition.name} selected" else condition.name)
+                }
+            }
         }
     }
 }
