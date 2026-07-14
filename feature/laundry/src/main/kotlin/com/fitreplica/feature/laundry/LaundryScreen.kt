@@ -41,7 +41,10 @@ fun LaundryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onAction(LaundryUiAction.OnErrorShown)
+        }
     }
 
     Scaffold(
@@ -120,6 +123,7 @@ fun LaundryScreen(
                     items(uiState.loads, key = { it.id.value }) { load ->
                         LaundryLoadRow(
                             load = load,
+                            isCompleting = load.id in uiState.completingLoadIds,
                             onComplete = {
                                 viewModel.onAction(LaundryUiAction.OnCompleteLoadClicked(load.id))
                             },
@@ -160,6 +164,7 @@ private fun DirtyItemRow(
 @Composable
 private fun LaundryLoadRow(
     load: LaundryLoad,
+    isCompleting: Boolean,
     onComplete: () -> Unit,
 ) {
     Row(
@@ -175,7 +180,7 @@ private fun LaundryLoadRow(
             )
         }
         if (load.completedAt == null) {
-            Button(onClick = onComplete) {
+            Button(onClick = onComplete, enabled = !isCompleting) {
                 Text("Complete")
             }
         }

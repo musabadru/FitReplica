@@ -18,11 +18,11 @@ class RuleEngine
     ) : SuggestionEngine {
         override suspend fun suggest(
             closet: List<ClothingItem>,
-            context: SuggestionContext,
-        ): List<OutfitSuggestion> {
-            val weather = context.weather ?: weatherProvider.currentWeather()
-            val tags = context.tags + weather.orEmptyTags()
-            return closet
+        context: SuggestionContext,
+    ): List<OutfitSuggestion> {
+        weatherProvider.currentWeatherUnlessProvided(context)
+        val tags = context.tags.normalizedTags()
+        return closet
                 .asSequence()
                 .filter { it.status == Status.CLEAN }
                 .filterNot { it.condition == Condition.RETIRED }
@@ -47,10 +47,14 @@ class RuleEngine
         }
     }
 
-private fun com.fitreplica.core.model.WeatherSnapshot?.orEmptyTags(): Set<String> = this?.conditionTags.orEmpty()
+private suspend fun WeatherProvider.currentWeatherUnlessProvided(context: SuggestionContext) {
+    if (context.weather == null) currentWeather()
+}
 
 private fun ClothingItem.matchesTag(tag: String): Boolean {
-    val normalized = tag.lowercase()
+    val normalized = tag.trim().lowercase()
     return listOfNotNull(name, brand, colorPrimary, colorSecondary, type.name, notes)
         .any { value -> value.lowercase().contains(normalized) }
 }
+
+private fun Set<String>.normalizedTags(): Set<String> = mapNotNullTo(mutableSetOf()) { it.trim().lowercase().takeIf(String::isNotBlank) }

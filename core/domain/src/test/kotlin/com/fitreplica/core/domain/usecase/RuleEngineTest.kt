@@ -7,6 +7,7 @@ import com.fitreplica.core.model.ClothingType
 import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.Status
 import com.fitreplica.core.model.SuggestionContext
+import com.fitreplica.core.model.WeatherSnapshot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -24,6 +25,36 @@ class RuleEngineTest {
             val suggestions = engine.suggest(listOf(cleanOverused, dirty, retired, cleanUnderused), SuggestionContext())
 
             assertEquals(ClothingId("clean-underused"), suggestions.first().itemIds.single())
+        }
+
+    @Test
+    fun `ignores blank tags and trims padded tags`() =
+        runTest {
+            val engine = RuleEngine(NoOpWeatherProvider())
+            val blueItem = item("blue-shirt", Status.CLEAN, Condition.GOOD, timesWorn = 0)
+
+            val suggestions =
+                engine.suggest(
+                    listOf(blueItem),
+                    SuggestionContext(tags = setOf(" ", " blue ")),
+                )
+
+            assertEquals(ClothingId("blue-shirt"), suggestions.single().itemIds.single())
+        }
+
+    @Test
+    fun `weather tags do not act as required text tags`() =
+        runTest {
+            val engine = RuleEngine(NoOpWeatherProvider())
+            val item = item("plain-shirt", Status.CLEAN, Condition.GOOD, timesWorn = 0)
+
+            val suggestions =
+                engine.suggest(
+                    listOf(item),
+                    SuggestionContext(weather = WeatherSnapshot(conditionTags = setOf("rainy"))),
+                )
+
+            assertEquals(ClothingId("plain-shirt"), suggestions.single().itemIds.single())
         }
 
     private fun item(

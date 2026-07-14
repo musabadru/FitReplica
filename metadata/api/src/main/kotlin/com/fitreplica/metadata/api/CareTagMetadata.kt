@@ -22,6 +22,7 @@ enum class CareTagSymbol {
     BLEACH,
     DO_NOT_BLEACH,
     DRY_CLEAN,
+    DO_NOT_DRY_CLEAN,
 }
 
 enum class CareRequirement {
@@ -35,4 +36,5 @@ enum class CareRequirement {
     AVOID_BLEACH,
     AVOID_IRON,
     DRY_CLEAN_ONLY,
+    AVOID_DRY_CLEAN,
 }

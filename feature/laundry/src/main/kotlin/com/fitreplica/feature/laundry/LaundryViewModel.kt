@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -38,32 +37,36 @@ class LaundryViewModel
     ) : ViewModel() {
         private val selectedItemIds = MutableStateFlow<Set<ClothingId>>(emptySet())
         private val isCreatingLoad = MutableStateFlow(false)
+        private val completingLoadIds = MutableStateFlow<Set<LaundryLoadId>>(emptySet())
         private val errorMessage = MutableStateFlow<String?>(null)
         private val dirtyItems =
             clothingRepository.observeItems(ClosetFilter(status = Status.DIRTY))
-                .onEach { items ->
-                    val eligibleIds =
-                        items
-                            .filterNot { it.condition == Condition.RETIRED }
-                            .mapTo(mutableSetOf()) { it.id }
-                    selectedItemIds.value = selectedItemIds.value.intersect(eligibleIds)
-                }
                 .map { items -> items.filterNot { it.condition == Condition.RETIRED } }
+        private val eligibleDirtyItemIds = dirtyItems.map { items -> items.mapTo(mutableSetOf()) { it.id } }
+        private val visibleSelectedItemIds =
+            combine(selectedItemIds, eligibleDirtyItemIds) { selectedIds, eligibleIds ->
+                selectedIds.intersect(eligibleIds)
+            }
+        private val progressState =
+            combine(isCreatingLoad, completingLoadIds) { isCreating, completingIds ->
+                LaundryProgressState(isCreatingLoad = isCreating, completingLoadIds = completingIds)
+            }
 
         val uiState =
             combine(
                 dirtyItems,
                 laundryRepository.observeLoads(),
-                selectedItemIds,
-                isCreatingLoad,
+                visibleSelectedItemIds,
+                progressState,
                 errorMessage,
-            ) { dirtyItems, loads, selectedIds, isCreating, error ->
+            ) { dirtyItems, loads, selectedIds, progress, error ->
                 LaundryUiState(
                     dirtyItems = dirtyItems,
                     loads = loads,
                     selectedItemIds = selectedIds,
+                    completingLoadIds = progress.completingLoadIds,
                     isLoading = false,
-                    isCreatingLoad = isCreating,
+                    isCreatingLoad = progress.isCreatingLoad,
                     errorMessage = error,
                 )
             }.stateIn(
@@ -77,6 +80,7 @@ class LaundryViewModel
                 is LaundryUiAction.OnItemSelectionChanged -> updateSelection(action.itemId, action.selected)
                 LaundryUiAction.OnCreateLoadClicked -> createLoad()
                 is LaundryUiAction.OnCompleteLoadClicked -> completeLoad(action.loadId)
+                LaundryUiAction.OnErrorShown -> errorMessage.value = null
             }
         }
 
@@ -120,8 +124,10 @@ class LaundryViewModel
 
         @Suppress("TooGenericExceptionCaught")
         private fun completeLoad(loadId: LaundryLoadId) {
+            if (loadId in completingLoadIds.value) return
             viewModelScope.launch {
                 errorMessage.value = null
+                completingLoadIds.value = completingLoadIds.value + loadId
                 try {
                     completeLaundryLoadUseCase(loadId)
                 } catch (e: CancellationException) {
@@ -129,7 +135,14 @@ class LaundryViewModel
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to complete laundry load $loadId", e)
                     errorMessage.value = LAUNDRY_ERROR
+                } finally {
+                    completingLoadIds.value = completingLoadIds.value - loadId
                 }
             }
         }
     }
+
+private data class LaundryProgressState(
+    val isCreatingLoad: Boolean,
+    val completingLoadIds: Set<LaundryLoadId>,
+)

@@ -6,9 +6,7 @@ import com.fitreplica.core.domain.repository.NoOpWeatherProvider
 import com.fitreplica.core.domain.repository.SuggestionEngine
 import com.fitreplica.core.domain.repository.WeatherProvider
 import com.fitreplica.core.domain.usecase.RuleEngine
-import com.fitreplica.metadata.api.CareTagMetadataProvider
 import com.fitreplica.metadata.api.MetadataProvider
-import com.fitreplica.metadata.caretag.CareTagOcrParser
 import com.fitreplica.metadata.noop.NoOpMetadataProvider
 import dagger.Binds
 import dagger.Module
@@ -36,9 +34,6 @@ abstract class MetadataModule {
     @Singleton
     abstract fun bindMetadataProvider(impl: NoOpMetadataProvider): MetadataProvider
 
-    @Binds
-    @Singleton
-    abstract fun bindCareTagMetadataProvider(impl: CareTagOcrParser): CareTagMetadataProvider
 }
 
 @Module

@@ -12,4 +12,6 @@ sealed interface LaundryUiAction {
     data object OnCreateLoadClicked : LaundryUiAction
 
     data class OnCompleteLoadClicked(val loadId: LaundryLoadId) : LaundryUiAction
+
+    data object OnErrorShown : LaundryUiAction
 }

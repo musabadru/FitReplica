@@ -54,10 +54,20 @@ private fun createConditionEventsTable(db: SupportSQLiteDatabase) {
         )
         """.trimIndent(),
     )
+    createConditionEventIndexes(db)
+}
+
+private fun createConditionEventIndexes(db: SupportSQLiteDatabase) {
     db.execSQL(
         """
-        CREATE INDEX IF NOT EXISTS `index_condition_events_itemId`
-        ON `condition_events` (`itemId`)
+        CREATE INDEX IF NOT EXISTS `index_condition_events_itemId_changedAt_id`
+        ON `condition_events` (`itemId`, `changedAt`, `id`)
+        """.trimIndent(),
+    )
+    db.execSQL(
+        """
+        CREATE INDEX IF NOT EXISTS `index_condition_events_changedAt_id`
+        ON `condition_events` (`changedAt`, `id`)
         """.trimIndent(),
     )
 }

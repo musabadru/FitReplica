@@ -38,7 +38,7 @@ class LaundryDaoTest {
     }
 
     @Test
-    fun `createLoad inserts crossrefs and moves items to in laundry`() =
+    fun `createLoad inserts crossrefs and moves items into laundry`() =
         runTest {
             val itemIds = listOf(ClothingId("item-1"), ClothingId("item-2"))
             itemIds.forEach { insertItem(it, Status.DIRTY) }
@@ -70,6 +70,22 @@ class LaundryDaoTest {
             val load = database.laundryDao().observeLoadsWithItems().first().single()
             assertEquals(2L, load.load.completedAt)
             assertEquals(Status.CLEAN, database.clothingDao().observeItem(itemId).first()?.status)
+        }
+
+    @Test
+    fun `completeLoad leaves items dirty if they changed after load started`() =
+        runTest {
+            val itemId = ClothingId("item-1")
+            insertItem(itemId, Status.DIRTY)
+            database.laundryDao().createLoad(
+                load = LaundryLoadEntity(LaundryLoadId("load-1"), startedAt = 1L, completedAt = null),
+                itemIds = listOf(itemId),
+            )
+            database.laundryDao().updateItemStatus(listOf(itemId), Status.DIRTY)
+
+            database.laundryDao().completeLoad(LaundryLoadId("load-1"), completedAt = 2L)
+
+            assertEquals(Status.DIRTY, database.clothingDao().observeItem(itemId).first()?.status)
         }
 
     private suspend fun insertItem(

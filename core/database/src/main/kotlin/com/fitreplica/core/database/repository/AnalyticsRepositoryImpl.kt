@@ -15,7 +15,8 @@ import com.fitreplica.core.model.WearStreakInterval
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import java.util.concurrent.TimeUnit
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 
 private const val OVER_ROTATED_MIN_WEAR_COUNT = 5
@@ -44,7 +45,7 @@ class AnalyticsRepositoryImpl
                     costPerWear =
                         domainItems.mapNotNull { item ->
                             val price = item.purchasePrice ?: return@mapNotNull null
-                            val wears = wearCountsByItemId.getOrDefault(item.id, 0).coerceAtLeast(1)
+                            val wears = wearCountsByItemId.getOrDefault(item.id, 0).takeIf { it > 0 } ?: return@mapNotNull null
                             ItemCostPerWear(item.id, item.name, price / wears)
                         },
                 )
@@ -100,13 +101,18 @@ private fun List<ConditionEventEntity>.repairTimes(
     return results
 }
 
-private fun List<WearEventEntity>.longestConsecutiveDayStreak(): Int {
-    val days = map { event -> TimeUnit.MILLISECONDS.toDays(event.dateTime) }.distinct().sorted()
+private fun List<WearEventEntity>.longestConsecutiveDayStreak(
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Int {
+    val days =
+        map { event ->
+            Instant.ofEpochMilli(event.dateTime).atZone(zoneId).toLocalDate()
+        }.distinct().sorted()
     if (days.isEmpty()) return 0
     var longest = 1
     var current = 1
     days.zipWithNext { previous, next ->
-        if (next == previous + 1) {
+        if (next == previous.plusDays(1)) {
             current += 1
             longest = maxOf(longest, current)
         } else {

@@ -2,6 +2,7 @@ package com.fitreplica.core.domain.usecase
 
 import com.fitreplica.core.domain.fake.FakeLaundryRepository
 import com.fitreplica.core.model.ClothingId
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -29,5 +30,17 @@ class CreateLaundryLoadUseCaseTest {
             useCase(listOf(ClothingId("item-1"), ClothingId("item-1"), ClothingId("item-2")))
 
             assertEquals(listOf(listOf(ClothingId("item-1"), ClothingId("item-2"))), repository.createdLoads)
+        }
+
+    @Test
+    fun `fake repository publishes created loads`() =
+        runTest {
+            val repository = FakeLaundryRepository()
+            val useCase = CreateLaundryLoadUseCase(repository)
+            val itemIds = listOf(ClothingId("item-1"))
+
+            useCase(itemIds)
+
+            assertEquals(itemIds, repository.observeLoads().first().single().itemIds)
         }
 }

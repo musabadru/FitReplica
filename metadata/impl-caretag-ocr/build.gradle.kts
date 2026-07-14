@@ -11,4 +11,6 @@ dependencies {
     implementation(libs.camerax.core)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.javax.inject)
+
+    testImplementation(libs.junit)
 }

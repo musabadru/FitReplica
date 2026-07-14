@@ -23,6 +23,7 @@ data class WearStreak(
 
 enum class WearStreakInterval {
     DAY,
+    WEEK,
 }
 
 data class RepairTime(

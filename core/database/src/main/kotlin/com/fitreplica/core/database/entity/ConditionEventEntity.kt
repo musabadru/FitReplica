@@ -18,7 +18,10 @@ import com.fitreplica.core.model.ConditionEventId
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("itemId")],
+    indices = [
+        Index(value = ["itemId", "changedAt", "id"]),
+        Index(value = ["changedAt", "id"]),
+    ],
 )
 data class ConditionEventEntity(
     @PrimaryKey val id: ConditionEventId,

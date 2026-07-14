@@ -8,6 +8,7 @@ import javax.inject.Inject
 
 private const val COLD_WASH_MAX_CELSIUS = 30
 private const val WARM_WASH_MAX_CELSIUS = 40
+private val TEMPERATURE_REGEX = Regex("""\b(\d{2,3})\s?(c|°c|degrees)\b""")
 
 class CareTagOcrParser
     @Inject
@@ -22,6 +23,7 @@ internal fun String.toCareTagResult(): CareTagScanResult {
     val hasNoTumbleDry = normalized.hasNoTumbleDry
     val hasNoIron = normalized.hasNoIron
     val hasNoBleach = normalized.hasNoBleach
+    val hasNoDryClean = normalized.hasNoDryClean
     val symbols =
         buildList {
             when {
@@ -44,9 +46,13 @@ internal fun String.toCareTagResult(): CareTagScanResult {
             } else if ("bleach" in normalized) {
                 add(CareTagSymbol.BLEACH)
             }
-            if ("dry clean" in normalized) add(CareTagSymbol.DRY_CLEAN)
+            if (hasNoDryClean) {
+                add(CareTagSymbol.DO_NOT_DRY_CLEAN)
+            } else if ("dry clean" in normalized) {
+                add(CareTagSymbol.DRY_CLEAN)
+            }
         }.distinct()
-    val temperature = Regex("""(\d{2})\s?(c|°c|degrees)""").find(normalized)?.groupValues?.get(1)?.toIntOrNull()
+    val temperature = TEMPERATURE_REGEX.find(normalized)?.groupValues?.get(1)?.toIntOrNull()
     return CareTagScanResult(
         rawText = this,
         recognizedSymbols = symbols,
@@ -60,22 +66,23 @@ private fun buildRequirements(
     temperature: Int?,
 ): List<CareRequirement> =
     listOfNotNull(
-        text.washRequirement(temperature),
+        CareRequirement.DO_NOT_WASH.takeIf { text.hasNoWash },
+        CareRequirement.DRY_CLEAN_ONLY.takeIf { text.requiresDryClean },
+        CareRequirement.AVOID_DRY_CLEAN.takeIf { text.hasNoDryClean },
+        CareRequirement.HAND_WASH_ONLY.takeIf { text.hasHandWash },
+        temperature.washTemperatureRequirement(),
         CareRequirement.AIR_DRY.takeIf { text.requiresAirDry },
         CareRequirement.LOW_HEAT.takeIf { "low heat" in text },
         CareRequirement.AVOID_BLEACH.takeIf { text.hasNoBleach },
         CareRequirement.AVOID_IRON.takeIf { text.hasNoIron },
     ).distinct()
 
-private fun String.washRequirement(temperature: Int?): CareRequirement? =
+private fun Int?.washTemperatureRequirement(): CareRequirement? =
     when {
-        hasNoWash -> CareRequirement.DO_NOT_WASH
-        "dry clean" in this -> CareRequirement.DRY_CLEAN_ONLY
-        hasHandWash -> CareRequirement.HAND_WASH_ONLY
-        temperature != null && temperature <= COLD_WASH_MAX_CELSIUS -> CareRequirement.COLD_WASH
-        temperature != null && temperature <= WARM_WASH_MAX_CELSIUS -> CareRequirement.WARM_WASH
-        temperature != null -> CareRequirement.HOT_WASH
-        else -> null
+        this == null -> null
+        this <= COLD_WASH_MAX_CELSIUS -> CareRequirement.COLD_WASH
+        this <= WARM_WASH_MAX_CELSIUS -> CareRequirement.WARM_WASH
+        else -> CareRequirement.HOT_WASH
     }
 
 private val String.hasNoWash: Boolean get() = "do not wash" in this || "no wash" in this
@@ -83,4 +90,6 @@ private val String.hasHandWash: Boolean get() = "hand wash" in this
 private val String.hasNoTumbleDry: Boolean get() = "do not tumble" in this || "no tumble" in this
 private val String.hasNoIron: Boolean get() = "do not iron" in this || "no iron" in this
 private val String.hasNoBleach: Boolean get() = "do not bleach" in this || "no bleach" in this
+private val String.hasNoDryClean: Boolean get() = "do not dry clean" in this || "no dry clean" in this
+private val String.requiresDryClean: Boolean get() = "dry clean" in this && !hasNoDryClean
 private val String.requiresAirDry: Boolean get() = "air dry" in this || "line dry" in this || hasNoTumbleDry

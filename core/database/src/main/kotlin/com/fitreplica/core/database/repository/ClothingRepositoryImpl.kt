@@ -17,6 +17,7 @@ import com.fitreplica.core.model.WearEventId
 import com.fitreplica.core.model.WearHistoryEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 class ClothingRepositoryImpl
@@ -89,15 +90,16 @@ class ClothingRepositoryImpl
             condition: Condition,
             notes: String?,
         ) {
+            val changedAt = System.currentTimeMillis()
             clothingDao.updateCondition(
                 itemId = itemId,
                 event =
                     ConditionEventEntity(
-                        id = ConditionEventId(java.util.UUID.randomUUID().toString()),
+                        id = newConditionEventId(changedAt),
                         itemId = itemId,
                         previousCondition = condition,
                         newCondition = condition,
-                        changedAt = System.currentTimeMillis(),
+                        changedAt = changedAt,
                         notes = notes,
                     ),
             )
@@ -106,6 +108,11 @@ class ClothingRepositoryImpl
         override fun observeConditionEvents(itemId: ClothingId): Flow<List<ConditionEvent>> =
             clothingDao.observeConditionEvents(itemId).map { list -> list.map { it.toDomain() } }
     }
+
+private val conditionEventSequence = AtomicLong()
+
+private fun newConditionEventId(changedAt: Long): ConditionEventId =
+    ConditionEventId("$changedAt-${conditionEventSequence.incrementAndGet().toString().padStart(12, '0')}")
 
 // "blue nike jacket" -> "blue* nike* jacket*": each term becomes an FTS4 prefix match
 // so partial words find results, matching the free-text search behaviour from §3.1.

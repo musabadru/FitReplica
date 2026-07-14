@@ -15,9 +15,26 @@ class FakeLaundryRepository : LaundryRepository {
 
     override suspend fun createLoad(itemIds: List<ClothingId>) {
         createdLoads += itemIds
+        loads.value =
+            listOf(
+                LaundryLoad(
+                    id = LaundryLoadId("fake-load-${createdLoads.size}"),
+                    startedAt = createdLoads.size.toLong(),
+                    completedAt = null,
+                    itemIds = itemIds,
+                ),
+            ) + loads.value
     }
 
     override suspend fun completeLoad(loadId: LaundryLoadId) {
         completedLoads += loadId
+        loads.value =
+            loads.value.map { load ->
+                if (load.id == loadId) {
+                    load.copy(completedAt = completedLoads.size.toLong())
+                } else {
+                    load
+                }
+            }
     }
 }

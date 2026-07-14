@@ -49,7 +49,7 @@ abstract class LaundryDao {
     ) {
         completeLoadOnly(loadId, completedAt)
         val itemIds = getLoadItemIds(loadId)
-        if (itemIds.isNotEmpty()) updateItemStatus(itemIds, Status.CLEAN)
+        if (itemIds.isNotEmpty()) markLaundryItemsClean(itemIds)
     }
 
     @Query("UPDATE laundry_loads SET completedAt = :completedAt WHERE id = :loadId")
@@ -66,4 +66,7 @@ abstract class LaundryDao {
         itemIds: List<ClothingId>,
         status: Status,
     )
+
+    @Query("UPDATE clothing_items SET status = 'CLEAN' WHERE id IN (:itemIds) AND status = 'IN_LAUNDRY'")
+    abstract suspend fun markLaundryItemsClean(itemIds: List<ClothingId>)
 }

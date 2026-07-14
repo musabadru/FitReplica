@@ -8,7 +8,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
-class CareTagImageAnalyzer(
+internal class CareTagImageAnalyzer(
     private val onResult: (CareTagScanResult) -> Unit,
     private val onError: (Throwable) -> Unit,
 ) : ImageAnalysis.Analyzer {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -58,21 +59,22 @@ fun AnalyticsScreen(
         }
         uiState.errorMessage?.let { message ->
             item {
-                Text(
-                    message,
+                ErrorSection(
+                    message = message,
+                    onRetryClick = viewModel::onRetryClicked,
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
+        } ?: run {
+            uiState.analytics?.let { analytics ->
+                item { ClosetAnalyticsSection(analytics) }
+            }
+            item { HorizontalDivider() }
+            item { WearStreakSection(uiState.wearStreaks) }
+            item { RepairSection(uiState.repairTimes) }
+            item { ContextSection(uiState.contextBreakdown) }
+            item { SuggestionSection(uiState.suggestions) }
         }
-        uiState.analytics?.let { analytics ->
-            item { ClosetAnalyticsSection(analytics) }
-        }
-        item { HorizontalDivider() }
-        item { WearStreakSection(uiState.wearStreaks) }
-        item { RepairSection(uiState.repairTimes) }
-        item { ContextSection(uiState.contextBreakdown) }
-        item { SuggestionSection(uiState.suggestions) }
     }
 }
 
@@ -109,6 +111,23 @@ private fun WearStreakSection(streaks: List<WearStreak>) {
             streaks.take(TOP_ANALYTICS_ITEMS).forEach {
                 MetricRow(it.itemName, "${it.streakLength} ${it.interval.name.lowercase()}s")
             }
+        }
+    }
+}
+
+@Composable
+private fun ErrorSection(
+    message: String,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(message, style = MaterialTheme.typography.bodyMedium)
+        Button(onClick = onRetryClick) {
+            Text("Retry")
         }
     }
 }

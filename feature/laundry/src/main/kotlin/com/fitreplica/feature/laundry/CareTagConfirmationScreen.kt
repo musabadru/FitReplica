@@ -13,6 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.fitreplica.metadata.api.CareRequirement
 import com.fitreplica.metadata.api.CareTagScanResult
 
 @Composable
@@ -33,7 +34,7 @@ fun CareTagConfirmationScreen(
             Text("Wash ${result.suggestedWashTemperatureCelsius}C", style = MaterialTheme.typography.bodyLarge)
         }
         result.careRequirements.forEach { requirement ->
-            Text(requirement.name, style = MaterialTheme.typography.bodyMedium)
+            Text(requirement.displayText(), style = MaterialTheme.typography.bodyMedium)
         }
         Button(onClick = onConfirm, modifier = Modifier.fillMaxWidth()) {
             Text("Confirm")
@@ -43,3 +44,18 @@ fun CareTagConfirmationScreen(
         }
     }
 }
+
+private fun CareRequirement.displayText(): String =
+    when (this) {
+        CareRequirement.DO_NOT_WASH -> "Do not wash"
+        CareRequirement.COLD_WASH -> "Cold wash"
+        CareRequirement.WARM_WASH -> "Warm wash"
+        CareRequirement.HOT_WASH -> "Hot wash"
+        CareRequirement.HAND_WASH_ONLY -> "Hand wash only"
+        CareRequirement.AIR_DRY -> "Air dry"
+        CareRequirement.LOW_HEAT -> "Low heat"
+        CareRequirement.AVOID_BLEACH -> "Avoid bleach"
+        CareRequirement.AVOID_IRON -> "Avoid ironing"
+        CareRequirement.DRY_CLEAN_ONLY -> "Dry clean only"
+        CareRequirement.AVOID_DRY_CLEAN -> "Avoid dry cleaning"
+    }
