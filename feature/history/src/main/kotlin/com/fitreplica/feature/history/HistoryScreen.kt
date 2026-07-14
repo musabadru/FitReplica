@@ -1,5 +1,6 @@
 package com.fitreplica.feature.history
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -43,6 +46,9 @@ private val DayHeaderFormatter = DateTimeFormatter.ofPattern("EEE, MMM d")
 private val MonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
 private val TimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 private const val CALENDAR_COLUMN_COUNT = 7
+private val CalendarGridHeight = 336.dp
+private val CalendarDayCellHeight = 44.dp
+private val CalendarDayBadgeSize = 20.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,13 +192,16 @@ private fun CalendarContent(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(CALENDAR_COLUMN_COUNT),
-            modifier = Modifier.height(280.dp).padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .height(CalendarGridHeight)
+                    .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             items(uiState.calendarLeadingBlankCount, key = { "blank-$it" }) {
-                Box(modifier = Modifier.fillMaxWidth())
+                Box(modifier = Modifier.fillMaxWidth().height(CalendarDayCellHeight))
             }
             items(uiState.calendarDays, key = { it.date.toString() }) { day ->
                 CalendarDayCell(
@@ -228,11 +237,34 @@ private fun CalendarDayCell(
     day: HistoryCalendarDay,
     onClick: () -> Unit,
 ) {
-    WardrobeCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    val containerColor =
+        if (day.isSelected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        }
+    val countColor =
+        if (day.wearCount > 0) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(CalendarDayCellHeight)
+                .clip(MaterialTheme.shapes.small)
+                .background(containerColor)
+                .clickable(onClick = onClick)
+                .padding(4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = day.date.dayOfMonth.toString(),
@@ -244,11 +276,20 @@ private fun CalendarDayCell(
                         MaterialTheme.colorScheme.onSurface
                     },
             )
-            Text(
-                text = if (day.wearCount == 0) "—" else day.wearCount.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(CalendarDayBadgeSize)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(countColor),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (day.wearCount == 0) "—" else day.wearCount.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

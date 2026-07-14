@@ -41,7 +41,9 @@ class HistoryViewModel
             retryState.flatMapLatest {
                 clothingRepository
                     .observeWearHistory()
-                    .map<List<WearHistoryEntry>, WearHistoryResult> { WearHistoryResult.Success(it) }
+                    .map<List<WearHistoryEntry>, WearHistoryResult> { entries ->
+                        WearHistoryResult.Success(entries = entries, projection = entries.toProjection())
+                    }
                     .catch { emit(WearHistoryResult.Error) }
             }
 
@@ -63,16 +65,15 @@ class HistoryViewModel
                             errorMessage = HISTORY_ERROR_MESSAGE,
                         )
                     is WearHistoryResult.Success -> {
-                        val datedEntries = result.entries.toDatedEntries()
                         HistoryUiState(
                             mode = mode,
                             entries = result.entries,
-                            timelineGroups = datedEntries.toTimelineGroups(),
+                            timelineGroups = result.projection.timelineGroups,
                             visibleMonth = visibleMonth,
                             selectedDate = selectedDate,
                             calendarLeadingBlankCount = visibleMonth.leadingBlankCount(),
-                            calendarDays = datedEntries.toCalendarDays(visibleMonth, selectedDate),
-                            selectedDayEntries = datedEntries.forDate(selectedDate),
+                            calendarDays = result.projection.toCalendarDays(visibleMonth, selectedDate),
+                            selectedDayEntries = result.projection.entriesForDate(selectedDate),
                             isLoading = false,
                         )
                     }
@@ -107,7 +108,10 @@ class HistoryViewModel
     }
 
 private sealed interface WearHistoryResult {
-    data class Success(val entries: List<WearHistoryEntry>) : WearHistoryResult
+    data class Success(
+        val entries: List<WearHistoryEntry>,
+        val projection: WearHistoryProjection,
+    ) : WearHistoryResult
 
     data object Error : WearHistoryResult
 }
@@ -117,30 +121,44 @@ private data class DatedWearHistoryEntry(
     val date: LocalDate,
 )
 
+private data class WearHistoryProjection(
+    val timelineGroups: List<HistoryDayGroup>,
+    val wearCountsByDate: Map<LocalDate, Int>,
+    val entriesByDate: Map<LocalDate, List<WearHistoryEntry>>,
+)
+
+private fun List<WearHistoryEntry>.toProjection(): WearHistoryProjection {
+    val datedEntries = toDatedEntries()
+    val entriesByDate = datedEntries.groupBy(keySelector = { it.date }, valueTransform = { it.entry })
+    return WearHistoryProjection(
+        timelineGroups =
+            entriesByDate.map { (date, entries) ->
+                HistoryDayGroup(date = date, entries = entries)
+            },
+        wearCountsByDate = entriesByDate.mapValues { (_, entries) -> entries.size },
+        entriesByDate = entriesByDate,
+    )
+}
+
 private fun List<WearHistoryEntry>.toDatedEntries(): List<DatedWearHistoryEntry> =
     map { entry -> DatedWearHistoryEntry(entry = entry, date = entry.localDate()) }
 
-private fun List<DatedWearHistoryEntry>.toTimelineGroups(): List<HistoryDayGroup> =
-    groupBy { it.date }
-        .map { (date, entries) -> HistoryDayGroup(date = date, entries = entries.map { it.entry }) }
-
-private fun List<DatedWearHistoryEntry>.toCalendarDays(
+private fun WearHistoryProjection.toCalendarDays(
     visibleMonth: YearMonth,
     selectedDate: LocalDate,
 ): List<HistoryCalendarDay> {
-    val countsByDate = groupingBy { it.date }.eachCount()
     return (1..visibleMonth.lengthOfMonth()).map { day ->
         val date = visibleMonth.atDay(day)
         HistoryCalendarDay(
             date = date,
-            wearCount = countsByDate[date] ?: 0,
+            wearCount = wearCountsByDate[date] ?: 0,
             isSelected = date == selectedDate,
         )
     }
 }
 
-private fun List<DatedWearHistoryEntry>.forDate(date: LocalDate): List<WearHistoryEntry> =
-    filter { it.date == date }.map { it.entry }
+private fun WearHistoryProjection.entriesForDate(date: LocalDate): List<WearHistoryEntry> =
+    entriesByDate[date].orEmpty()
 
 private fun WearHistoryEntry.localDate(): LocalDate =
     Instant
