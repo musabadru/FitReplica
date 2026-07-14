@@ -86,12 +86,12 @@ dependencies {
     implementation(project(":avatar:api"))
     implementation(project(":metadata:api"))
     implementation(project(":metadata:impl-noop"))
-    implementation(project(":metadata:impl-caretag-ocr"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.graphics.path)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.hilt.navigation.compose)
 }
