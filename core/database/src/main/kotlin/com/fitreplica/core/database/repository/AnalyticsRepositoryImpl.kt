@@ -45,7 +45,11 @@ class AnalyticsRepositoryImpl
                     costPerWear =
                         domainItems.mapNotNull { item ->
                             val price = item.purchasePrice ?: return@mapNotNull null
-                            val wears = wearCountsByItemId.getOrDefault(item.id, 0).takeIf { it > 0 } ?: return@mapNotNull null
+                            val wears =
+                                wearCountsByItemId
+                                    .getOrDefault(item.id, 0)
+                                    .takeIf { it > 0 }
+                                    ?: return@mapNotNull null
                             ItemCostPerWear(item.id, item.name, price / wears)
                         },
                 )
@@ -101,9 +105,7 @@ private fun List<ConditionEventEntity>.repairTimes(
     return results
 }
 
-private fun List<WearEventEntity>.longestConsecutiveDayStreak(
-    zoneId: ZoneId = ZoneId.systemDefault(),
-): Int {
+private fun List<WearEventEntity>.longestConsecutiveDayStreak(zoneId: ZoneId = ZoneId.systemDefault()): Int {
     val days =
         map { event ->
             Instant.ofEpochMilli(event.dateTime).atZone(zoneId).toLocalDate()

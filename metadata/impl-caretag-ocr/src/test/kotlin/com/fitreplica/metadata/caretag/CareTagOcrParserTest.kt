@@ -6,6 +6,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+private const val HOT_WASH_TEMPERATURE_CELSIUS = 100
+
 class CareTagOcrParserTest {
     @Test
     fun `parses negative dry clean before positive dry clean`() {
@@ -28,9 +30,9 @@ class CareTagOcrParserTest {
 
     @Test
     fun `parses three digit wash temperature without partial match`() {
-        val result = "Wash 100°c".toCareTagResult()
+        val result = "Wash ${HOT_WASH_TEMPERATURE_CELSIUS}°c".toCareTagResult()
 
-        assertEquals(100, result.suggestedWashTemperatureCelsius)
+        assertEquals(HOT_WASH_TEMPERATURE_CELSIUS, result.suggestedWashTemperatureCelsius)
         assertTrue(CareRequirement.HOT_WASH in result.careRequirements)
     }
 }

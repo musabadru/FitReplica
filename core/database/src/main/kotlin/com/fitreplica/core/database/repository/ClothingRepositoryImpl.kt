@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.map
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
+private const val CONDITION_EVENT_SEQUENCE_WIDTH = 12
+
 class ClothingRepositoryImpl
     @Inject
     constructor(
@@ -112,7 +114,13 @@ class ClothingRepositoryImpl
 private val conditionEventSequence = AtomicLong()
 
 private fun newConditionEventId(changedAt: Long): ConditionEventId =
-    ConditionEventId("$changedAt-${conditionEventSequence.incrementAndGet().toString().padStart(12, '0')}")
+    ConditionEventId(
+        "$changedAt-${
+            conditionEventSequence.incrementAndGet()
+                .toString()
+                .padStart(CONDITION_EVENT_SEQUENCE_WIDTH, '0')
+        }",
+    )
 
 // "blue nike jacket" -> "blue* nike* jacket*": each term becomes an FTS4 prefix match
 // so partial words find results, matching the free-text search behaviour from §3.1.

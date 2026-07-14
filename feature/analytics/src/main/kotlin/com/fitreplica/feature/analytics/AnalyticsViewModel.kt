@@ -75,10 +75,10 @@ class AnalyticsViewModel
                         )
                     }
                 }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = AnalyticsUiState(),
-            )
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+                    initialValue = AnalyticsUiState(),
+                )
 
         fun onRetryClicked() {
             retryRequests.update { it + 1 }

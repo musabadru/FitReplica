@@ -11,7 +11,6 @@ hilt = "2.58"
 hiltNavigationCompose = "1.2.0"
 room = "2.8.4"
 datastore = "1.2.1"
-graphicsPath = "1.1.0"
 protobufPlugin = "0.9.4"
 protobufJavalite = "3.25.1"
 coroutines = "1.9.0"
@@ -52,7 +51,6 @@ compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4
 compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
-androidx-graphics-path = { group = "androidx.graphics", name = "graphics-path", version.ref = "graphicsPath" }
 screenshot-validation-api = { group = "com.android.tools.screenshot", name = "screenshot-validation-api", version.ref = "screenshotValidation" }
 
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }

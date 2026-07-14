@@ -18,11 +18,11 @@ class RuleEngine
     ) : SuggestionEngine {
         override suspend fun suggest(
             closet: List<ClothingItem>,
-        context: SuggestionContext,
-    ): List<OutfitSuggestion> {
-        weatherProvider.currentWeatherUnlessProvided(context)
-        val tags = context.tags.normalizedTags()
-        return closet
+            context: SuggestionContext,
+        ): List<OutfitSuggestion> {
+            weatherProvider.currentWeatherUnlessProvided(context)
+            val tags = context.tags.normalizedTags()
+            return closet
                 .asSequence()
                 .filter { it.status == Status.CLEAN }
                 .filterNot { it.condition == Condition.RETIRED }
@@ -57,4 +57,7 @@ private fun ClothingItem.matchesTag(tag: String): Boolean {
         .any { value -> value.lowercase().contains(normalized) }
 }
 
-private fun Set<String>.normalizedTags(): Set<String> = mapNotNullTo(mutableSetOf()) { it.trim().lowercase().takeIf(String::isNotBlank) }
+private fun Set<String>.normalizedTags(): Set<String> =
+    mapNotNullTo(mutableSetOf()) { tag ->
+        tag.trim().lowercase().takeIf(String::isNotBlank)
+    }

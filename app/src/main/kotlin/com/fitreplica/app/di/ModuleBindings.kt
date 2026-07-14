@@ -33,7 +33,6 @@ abstract class MetadataModule {
     @Binds
     @Singleton
     abstract fun bindMetadataProvider(impl: NoOpMetadataProvider): MetadataProvider
-
 }
 
 @Module

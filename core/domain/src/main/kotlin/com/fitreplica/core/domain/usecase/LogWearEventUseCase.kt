@@ -15,9 +15,9 @@ class LogWearEventUseCase
         suspend operator fun invoke(
             itemId: ClothingId,
             outfitId: OutfitId? = null,
-        context: String? = null,
-    ) {
-        if (clothingRepository.observeItem(itemId).first()?.condition == Condition.RETIRED) return
-        clothingRepository.logWear(itemId, outfitId, context)
+            context: String? = null,
+        ) {
+            if (clothingRepository.observeItem(itemId).first()?.condition == Condition.RETIRED) return
+            clothingRepository.logWear(itemId, outfitId, context)
+        }
     }
-}
