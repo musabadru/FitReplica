@@ -3,12 +3,15 @@ package com.fitreplica.core.database.repository
 import com.fitreplica.core.database.dao.ClothingDao
 import com.fitreplica.core.database.dao.WearHistoryRow
 import com.fitreplica.core.database.entity.ClothingItemEntity
+import com.fitreplica.core.database.entity.ConditionEventEntity
 import com.fitreplica.core.database.entity.WearEventEntity
 import com.fitreplica.core.domain.repository.ClosetFilter
 import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEvent
+import com.fitreplica.core.model.ConditionEventId
 import com.fitreplica.core.model.OutfitId
 import com.fitreplica.core.model.WearEventId
 import com.fitreplica.core.model.WearHistoryEntry
@@ -84,9 +87,24 @@ class ClothingRepositoryImpl
         override suspend fun updateCondition(
             itemId: ClothingId,
             condition: Condition,
+            notes: String?,
         ) {
-            clothingDao.updateCondition(itemId, condition)
+            clothingDao.updateCondition(
+                itemId = itemId,
+                event =
+                    ConditionEventEntity(
+                        id = ConditionEventId(java.util.UUID.randomUUID().toString()),
+                        itemId = itemId,
+                        previousCondition = condition,
+                        newCondition = condition,
+                        changedAt = System.currentTimeMillis(),
+                        notes = notes,
+                    ),
+            )
         }
+
+        override fun observeConditionEvents(itemId: ClothingId): Flow<List<ConditionEvent>> =
+            clothingDao.observeConditionEvents(itemId).map { list -> list.map { it.toDomain() } }
     }
 
 // "blue nike jacket" -> "blue* nike* jacket*": each term becomes an FTS4 prefix match
@@ -159,5 +177,15 @@ private fun ClothingItem.toEntity(): ClothingItemEntity =
         purchasePrice = purchasePrice,
         purchaseDate = purchaseDate,
         purchaseLocation = purchaseLocation,
+        notes = notes,
+    )
+
+private fun ConditionEventEntity.toDomain(): ConditionEvent =
+    ConditionEvent(
+        id = id,
+        itemId = itemId,
+        previousCondition = previousCondition,
+        newCondition = newCondition,
+        changedAt = changedAt,
         notes = notes,
     )

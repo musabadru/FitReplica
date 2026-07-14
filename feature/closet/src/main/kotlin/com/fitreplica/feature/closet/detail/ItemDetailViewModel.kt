@@ -9,7 +9,9 @@ import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.domain.repository.ImageRepository
 import com.fitreplica.core.domain.usecase.DeleteClothingItemUseCase
 import com.fitreplica.core.domain.usecase.LogWearEventUseCase
+import com.fitreplica.core.domain.usecase.UpdateConditionUseCase
 import com.fitreplica.core.model.ClothingId
+import com.fitreplica.core.model.Condition
 import com.fitreplica.feature.closet.ITEM_ID_ARG
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -24,6 +26,7 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
 private const val PHOTO_SAVE_WARNING = "Couldn't save that photo (storage issue)."
 private const val PHOTO_ACTION_ERROR = "Couldn't update that photo. Try again."
 private const val DELETE_ERROR = "Couldn't delete this item. Try again."
+private const val CONDITION_ERROR = "Couldn't update condition. Try again."
 private const val TAG = "ItemDetailViewModel"
 
 @HiltViewModel
@@ -35,27 +38,37 @@ class ItemDetailViewModel
         private val imageRepository: ImageRepository,
         private val logWearEventUseCase: LogWearEventUseCase,
         private val deleteClothingItemUseCase: DeleteClothingItemUseCase,
+        private val updateConditionUseCase: UpdateConditionUseCase,
     ) : ViewModel() {
         private val itemId = ClothingId(checkNotNull(savedStateHandle.get<String>(ITEM_ID_ARG)))
         private val isDeletedState = MutableStateFlow(false)
         private val photoWarningState = MutableStateFlow<String?>(null)
         private val deleteErrorState = MutableStateFlow<String?>(null)
+        private val conditionErrorState = MutableStateFlow<String?>(null)
+        private val messageState =
+            combine(
+                photoWarningState,
+                deleteErrorState,
+                conditionErrorState,
+            ) { photoWarning, deleteError, conditionError ->
+                DetailMessages(photoWarning, deleteError, conditionError)
+            }
 
         val uiState =
             combine(
                 clothingRepository.observeItem(itemId),
                 imageRepository.observeImages(itemId),
                 isDeletedState,
-                photoWarningState,
-                deleteErrorState,
-            ) { item, images, isDeleted, photoWarning, deleteError ->
+                messageState,
+            ) { item, images, isDeleted, messages ->
                 ItemDetailUiState(
                     item = item,
                     images = images,
                     isLoading = false,
                     isDeleted = isDeleted,
-                    photoWarning = photoWarning,
-                    deleteError = deleteError,
+                    photoWarning = messages.photoWarning,
+                    deleteError = messages.deleteError,
+                    conditionError = messages.conditionError,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -75,6 +88,23 @@ class ItemDetailViewModel
                 is ItemDetailUiAction.OnDeleteImage -> deleteImage(action.imageId)
 
                 is ItemDetailUiAction.OnPhotoAdded -> onPhotoAdded(action.sourceUri)
+
+                is ItemDetailUiAction.OnConditionSelected -> updateCondition(action.condition)
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun updateCondition(condition: Condition) {
+            viewModelScope.launch {
+                conditionErrorState.value = null
+                try {
+                    updateConditionUseCase(itemId, condition)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to update condition for item $itemId", e)
+                    conditionErrorState.value = CONDITION_ERROR
+                }
             }
         }
 
@@ -134,3 +164,9 @@ class ItemDetailViewModel
             }
         }
     }
+
+private data class DetailMessages(
+    val photoWarning: String?,
+    val deleteError: String?,
+    val conditionError: String?,
+)

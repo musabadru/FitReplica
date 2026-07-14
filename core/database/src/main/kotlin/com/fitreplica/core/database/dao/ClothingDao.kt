@@ -6,6 +6,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.fitreplica.core.database.entity.ClothingItemEntity
+import com.fitreplica.core.database.entity.ConditionEventEntity
 import com.fitreplica.core.database.entity.WearEventEntity
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingType
@@ -99,10 +100,34 @@ abstract class ClothingDao {
     ): Flow<List<ClothingItemEntity>>
 
     @Query("UPDATE clothing_items SET condition = :condition WHERE id = :itemId")
-    abstract suspend fun updateCondition(
+    abstract suspend fun updateConditionOnly(
         itemId: ClothingId,
         condition: Condition,
     )
+
+    @Query("SELECT condition FROM clothing_items WHERE id = :itemId")
+    abstract suspend fun getCondition(itemId: ClothingId): Condition?
+
+    @Insert
+    abstract suspend fun insertConditionEvent(event: ConditionEventEntity)
+
+    @Transaction
+    open suspend fun updateCondition(
+        itemId: ClothingId,
+        event: ConditionEventEntity,
+    ): Boolean {
+        val previous = getCondition(itemId) ?: return false
+        if (previous == event.newCondition) return false
+        insertConditionEvent(event.copy(previousCondition = previous))
+        updateConditionOnly(itemId, event.newCondition)
+        return true
+    }
+
+    @Query("SELECT * FROM condition_events WHERE itemId = :itemId ORDER BY changedAt DESC, id DESC")
+    abstract fun observeConditionEvents(itemId: ClothingId): Flow<List<ConditionEventEntity>>
+
+    @Query("SELECT * FROM condition_events ORDER BY changedAt ASC, id ASC")
+    abstract fun observeConditionEvents(): Flow<List<ConditionEventEntity>>
 
     /**
      * Current-state counter and event-history insert happen in one transaction
@@ -137,7 +162,16 @@ abstract class ClothingDao {
     @Insert
     abstract suspend fun insertWearEvent(event: WearEventEntity)
 
-    @Query("UPDATE clothing_items SET lastWornAt = :wornAt, timesWorn = timesWorn + 1 WHERE id = :itemId")
+    @Query("SELECT * FROM wear_events ORDER BY dateTime ASC, id ASC")
+    abstract fun observeWearEvents(): Flow<List<WearEventEntity>>
+
+    @Query(
+        """
+        UPDATE clothing_items
+        SET lastWornAt = :wornAt, timesWorn = timesWorn + 1, status = 'DIRTY'
+        WHERE id = :itemId
+        """,
+    )
     abstract suspend fun updateLastWorn(
         itemId: ClothingId,
         wornAt: Long,

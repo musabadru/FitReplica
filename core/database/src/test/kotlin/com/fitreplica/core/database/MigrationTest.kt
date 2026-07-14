@@ -13,8 +13,10 @@ import org.robolectric.annotation.Config
 
 private const val MIGRATION_1_2_TEST_DB = "migration-1-2-test"
 private const val MIGRATION_2_3_TEST_DB = "migration-2-3-test"
+private const val MIGRATION_3_4_TEST_DB = "migration-3-4-test"
 private const val VERSION_TWO = 2
 private const val VERSION_THREE = 3
+private const val VERSION_FOUR = 4
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -134,5 +136,47 @@ class MigrationTest {
             }
             assertTrue("Expected wear_events dateTime index after migration", hasDateTimeIndex)
         }
+    }
+
+    @Test
+    fun `migrate 3 to 4 preserves existing rows and adds condition events`() {
+        val testDbPath =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+                .getDatabasePath(MIGRATION_3_4_TEST_DB)
+                .absolutePath
+
+        helper.createDatabase(testDbPath, VERSION_THREE).apply {
+            execSQL(
+                """
+                INSERT INTO clothing_items
+                (id, name, type, brand, colorPrimary, colorSecondary, condition, status,
+                 timesWorn, lastWornAt, addedAt, sku, avatarSlot, purchasePrice, purchaseDate,
+                 purchaseLocation, notes, size_label, size_system, size_category,
+                 size_measuredChestCm, size_measuredWaistCm, size_measuredLengthCm)
+                VALUES
+                ('item-1', 'Blue Nike Jacket', 'OUTERWEAR', 'Nike', 'blue', NULL, 'NEW', 'CLEAN',
+                 0, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migratedDb = helper.runMigrationsAndValidate(testDbPath, VERSION_FOUR, true, MIGRATION_3_4)
+
+        val itemCount =
+            migratedDb.query("SELECT COUNT(*) FROM clothing_items").use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }
+        check(itemCount == 1) { "Expected the pre-migration row to survive, found $itemCount" }
+
+        val conditionEventCount =
+            migratedDb.query("SELECT COUNT(*) FROM condition_events").use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }
+        check(conditionEventCount == 0) { "Expected no synthetic condition events, found $conditionEventCount" }
     }
 }

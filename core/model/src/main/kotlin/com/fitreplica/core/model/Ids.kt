@@ -11,3 +11,6 @@ value class LaundryLoadId(val value: String)
 
 @JvmInline
 value class WearEventId(val value: String)
+
+@JvmInline
+value class ConditionEventId(val value: String)

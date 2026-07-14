@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingType
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEventId
 import com.fitreplica.core.model.LaundryLoadId
 import com.fitreplica.core.model.OutfitId
 import com.fitreplica.core.model.SizeCategory
@@ -35,6 +36,12 @@ class Converters {
 
     @TypeConverter
     fun toWearEventId(value: String?): WearEventId? = value?.let(::WearEventId)
+
+    @TypeConverter
+    fun fromConditionEventId(id: ConditionEventId?): String? = id?.value
+
+    @TypeConverter
+    fun toConditionEventId(value: String?): ConditionEventId? = value?.let(::ConditionEventId)
 
     @TypeConverter
     fun fromClothingType(value: ClothingType?): String? = EnumTypeConverter.toStorage(value)

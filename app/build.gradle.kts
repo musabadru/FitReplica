@@ -86,6 +86,7 @@ dependencies {
     implementation(project(":avatar:api"))
     implementation(project(":metadata:api"))
     implementation(project(":metadata:impl-noop"))
+    implementation(project(":metadata:impl-caretag-ocr"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
