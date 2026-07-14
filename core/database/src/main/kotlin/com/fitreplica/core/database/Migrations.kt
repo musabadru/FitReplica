@@ -21,6 +21,32 @@ val MIGRATION_1_2 =
         }
     }
 
+val MIGRATION_2_3 =
+    object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `condition_events` (
+                    `id` TEXT NOT NULL,
+                    `itemId` TEXT NOT NULL,
+                    `previousCondition` TEXT NOT NULL,
+                    `newCondition` TEXT NOT NULL,
+                    `changedAt` INTEGER NOT NULL,
+                    `notes` TEXT,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`itemId`) REFERENCES `clothing_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS `index_condition_events_itemId`
+                ON `condition_events` (`itemId`)
+                """.trimIndent(),
+            )
+        }
+    }
+
 private fun createOutfitTables(db: SupportSQLiteDatabase) {
     db.execSQL(
         """

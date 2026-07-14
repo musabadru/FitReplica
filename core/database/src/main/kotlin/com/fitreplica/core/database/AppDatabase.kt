@@ -9,6 +9,7 @@ import com.fitreplica.core.database.dao.LaundryDao
 import com.fitreplica.core.database.dao.OutfitDao
 import com.fitreplica.core.database.entity.ClothingItemEntity
 import com.fitreplica.core.database.entity.ClothingItemFts
+import com.fitreplica.core.database.entity.ConditionEventEntity
 import com.fitreplica.core.database.entity.ImageEntity
 import com.fitreplica.core.database.entity.LaundryLoadEntity
 import com.fitreplica.core.database.entity.LaundryLoadItemCrossRef
@@ -20,6 +21,7 @@ import com.fitreplica.core.database.entity.WearEventEntity
     entities = [
         ClothingItemEntity::class,
         WearEventEntity::class,
+        ConditionEventEntity::class,
         OutfitEntity::class,
         OutfitItemCrossRef::class,
         LaundryLoadEntity::class,
@@ -27,7 +29,7 @@ import com.fitreplica.core.database.entity.WearEventEntity
         ImageEntity::class,
         ClothingItemFts::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class, ListConverters::class)

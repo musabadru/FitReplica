@@ -10,6 +10,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 private const val TEST_DB = "migration-test"
+private const val TEST_DB_V2_TO_V3 = "migration-test-v2-v3"
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -70,5 +71,40 @@ class MigrationTest {
             cursor.moveToFirst()
             assertTrue("Expected the orphaned pre-v1 outfitId to be cleared", cursor.isNull(0))
         }
+    }
+
+    @Test
+    fun `migrate 2 to 3 preserves existing rows and adds condition events`() {
+        helper.createDatabase(TEST_DB_V2_TO_V3, 2).apply {
+            execSQL(
+                """
+                INSERT INTO clothing_items
+                (id, name, type, brand, colorPrimary, colorSecondary, condition, status,
+                 timesWorn, lastWornAt, addedAt, sku, avatarSlot, purchasePrice, purchaseDate,
+                 purchaseLocation, notes, size_label, size_system, size_category,
+                 size_measuredChestCm, size_measuredWaistCm, size_measuredLengthCm)
+                VALUES
+                ('item-1', 'Blue Nike Jacket', 'OUTERWEAR', 'Nike', 'blue', NULL, 'NEW', 'CLEAN',
+                 0, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migratedDb = helper.runMigrationsAndValidate(TEST_DB_V2_TO_V3, 3, true, MIGRATION_2_3)
+
+        val itemCount =
+            migratedDb.query("SELECT COUNT(*) FROM clothing_items").use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }
+        check(itemCount == 1) { "Expected the pre-migration row to survive, found $itemCount" }
+
+        val conditionEventCount =
+            migratedDb.query("SELECT COUNT(*) FROM condition_events").use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }
+        check(conditionEventCount == 0) { "Expected no synthetic condition events, found $conditionEventCount" }
     }
 }

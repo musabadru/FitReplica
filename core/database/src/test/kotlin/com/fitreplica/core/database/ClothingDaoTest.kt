@@ -4,9 +4,11 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.fitreplica.core.database.dao.ClothingDao
 import com.fitreplica.core.database.entity.ClothingItemEntity
+import com.fitreplica.core.database.entity.ConditionEventEntity
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingType
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEventId
 import com.fitreplica.core.model.Status
 import com.fitreplica.core.model.WearEventId
 import kotlinx.coroutines.flow.first
@@ -68,6 +70,7 @@ class ClothingDaoTest {
             val updated = dao.observeItem(item.id).first()
             assertEquals(1, updated?.timesWorn)
             assertEquals(WEAR_EVENT_TIME_MILLIS, updated?.lastWornAt)
+            assertEquals(Status.DIRTY, updated?.status)
 
             database.query("SELECT id, itemId, dateTime, context FROM wear_events", null).use { cursor ->
                 assertEquals(1, cursor.count)
@@ -111,16 +114,88 @@ class ClothingDaoTest {
         }
 
     @Test
-    fun `updateCondition changes only the condition column`() =
+    fun `updateCondition changes item snapshot and inserts condition event`() =
         runTest {
             val item = clothingItem(id = "item-1", condition = Condition.NEW)
             dao.insertItem(item)
 
-            dao.updateCondition(item.id, Condition.NEEDS_REPAIR)
+            dao.updateCondition(
+                item.id,
+                ConditionEventEntity(
+                    id = ConditionEventId("condition-event-1"),
+                    itemId = item.id,
+                    previousCondition = Condition.NEW,
+                    newCondition = Condition.NEEDS_REPAIR,
+                    changedAt = WEAR_EVENT_TIME_MILLIS,
+                    notes = "Loose seam",
+                ),
+            )
 
             val updated = dao.observeItem(item.id).first()
             assertEquals(Condition.NEEDS_REPAIR, updated?.condition)
             assertEquals(item.name, updated?.name)
+
+            val events = dao.observeConditionEvents(item.id).first()
+            assertEquals(1, events.size)
+            assertEquals(Condition.NEW, events.single().previousCondition)
+            assertEquals(Condition.NEEDS_REPAIR, events.single().newCondition)
+            assertEquals("Loose seam", events.single().notes)
+        }
+
+    @Test
+    fun `updateCondition is a no-op when condition is unchanged`() =
+        runTest {
+            val item = clothingItem(id = "item-1", condition = Condition.NEW)
+            dao.insertItem(item)
+
+            val changed =
+                dao.updateCondition(
+                    item.id,
+                    ConditionEventEntity(
+                        id = ConditionEventId("condition-event-1"),
+                        itemId = item.id,
+                        previousCondition = Condition.NEW,
+                        newCondition = Condition.NEW,
+                        changedAt = WEAR_EVENT_TIME_MILLIS,
+                        notes = null,
+                    ),
+                )
+
+            assertEquals(false, changed)
+            assertEquals(emptyList<ConditionEventEntity>(), dao.observeConditionEvents(item.id).first())
+        }
+
+    @Test
+    fun `repeated updateCondition calls preserve history order`() =
+        runTest {
+            val item = clothingItem(id = "item-1", condition = Condition.NEW)
+            dao.insertItem(item)
+
+            dao.updateCondition(
+                item.id,
+                ConditionEventEntity(
+                    id = ConditionEventId("condition-event-1"),
+                    itemId = item.id,
+                    previousCondition = Condition.NEW,
+                    newCondition = Condition.WORN,
+                    changedAt = WEAR_EVENT_TIME_MILLIS,
+                    notes = null,
+                ),
+            )
+            dao.updateCondition(
+                item.id,
+                ConditionEventEntity(
+                    id = ConditionEventId("condition-event-2"),
+                    itemId = item.id,
+                    previousCondition = Condition.WORN,
+                    newCondition = Condition.GOOD,
+                    changedAt = SECOND_WEAR_EVENT_TIME_MILLIS,
+                    notes = null,
+                ),
+            )
+
+            val events = dao.observeConditionEvents(item.id).first()
+            assertEquals(listOf(Condition.GOOD, Condition.WORN), events.map { it.newCondition })
         }
 
     @Test

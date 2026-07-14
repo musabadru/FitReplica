@@ -3,6 +3,7 @@ package com.fitreplica.core.domain.repository
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEvent
 import com.fitreplica.core.model.OutfitId
 import kotlinx.coroutines.flow.Flow
 
@@ -26,5 +27,8 @@ interface ClothingRepository {
     suspend fun updateCondition(
         itemId: ClothingId,
         condition: Condition,
+        notes: String? = null,
     )
+
+    fun observeConditionEvents(itemId: ClothingId): Flow<List<ConditionEvent>>
 }

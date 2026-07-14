@@ -5,8 +5,10 @@ import com.fitreplica.core.domain.repository.ClothingRepository
 import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.ConditionEvent
 import com.fitreplica.core.model.OutfitId
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 class FakeClothingRepository : ClothingRepository {
@@ -43,12 +45,15 @@ class FakeClothingRepository : ClothingRepository {
     override suspend fun updateCondition(
         itemId: ClothingId,
         condition: Condition,
+        notes: String?,
     ) {
         items.value =
             items.value.map { item ->
                 if (item.id == itemId) item.copy(condition = condition) else item
             }
     }
+
+    override fun observeConditionEvents(itemId: ClothingId) = flowOf<List<ConditionEvent>>(emptyList())
 }
 
 private fun ClothingItem.matches(filter: ClosetFilter): Boolean {
