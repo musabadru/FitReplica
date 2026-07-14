@@ -84,6 +84,7 @@ dependencies {
     implementation(project(":feature:analytics"))
 
     implementation(project(":avatar:api"))
+    implementation(project(":avatar:impl-2d"))
     implementation(project(":metadata:api"))
     implementation(project(":metadata:impl-noop"))
 
@@ -93,4 +94,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.hilt.navigation.compose)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -36,6 +36,7 @@ include(":feature:laundry")
 include(":feature:analytics")
 
 include(":avatar:api")
+include(":avatar:impl-2d")
 
 include(":metadata:api")
 include(":metadata:impl-noop")

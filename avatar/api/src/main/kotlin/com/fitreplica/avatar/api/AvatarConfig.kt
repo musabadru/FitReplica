@@ -1,10 +1,7 @@
 package com.fitreplica.avatar.api
 
-/**
- * Derived from UserProfileEntity (height, waist/chest/hip) once that entity lands
- * in :core:database (Phase 1, issue #11) — a fromUserProfile(...) factory arrives then.
- * No separate BodyType enum: the renderer infers silhouette from these ratios directly.
- */
+import com.fitreplica.core.model.BodyMeasurements
+
 data class AvatarConfig(
     val heightCm: Float,
     val chestBustCm: Float?,
@@ -15,6 +12,10 @@ data class AvatarConfig(
 ) {
     companion object {
         const val DEFAULT_HEIGHT_CM = 170f
+        private const val MIN_HEIGHT_CM = 120f
+        private const val MAX_HEIGHT_CM = 230f
+        private const val MIN_CIRCUMFERENCE_CM = 40f
+        private const val MAX_CIRCUMFERENCE_CM = 180f
 
         fun default(skinTone: SkinTone = SkinTone.MEDIUM): AvatarConfig =
             AvatarConfig(
@@ -25,5 +26,27 @@ data class AvatarConfig(
                 skinTone = skinTone,
                 animationEnabled = true,
             )
+
+        fun fromMeasurements(
+            measurements: BodyMeasurements?,
+            skinTone: SkinTone = SkinTone.MEDIUM,
+            animationEnabled: Boolean = true,
+        ): AvatarConfig =
+            AvatarConfig(
+                heightCm = measurements?.heightCm.usableHeightCm() ?: DEFAULT_HEIGHT_CM,
+                chestBustCm = measurements?.chestBustCm.usableCircumferenceCm(),
+                waistCm = measurements?.waistCm.usableCircumferenceCm(),
+                hipCm = measurements?.hipCm.usableCircumferenceCm(),
+                skinTone = skinTone,
+                animationEnabled = animationEnabled,
+            )
+
+        private fun Float?.usableHeightCm(): Float? {
+            return this?.takeIf { it in MIN_HEIGHT_CM..MAX_HEIGHT_CM }
+        }
+
+        private fun Float?.usableCircumferenceCm(): Float? {
+            return this?.takeIf { it in MIN_CIRCUMFERENCE_CM..MAX_CIRCUMFERENCE_CM }
+        }
     }
 }
