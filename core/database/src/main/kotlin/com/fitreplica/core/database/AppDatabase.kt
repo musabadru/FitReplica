@@ -27,7 +27,7 @@ import com.fitreplica.core.database.entity.WearEventEntity
         ImageEntity::class,
         ClothingItemFts::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class, ListConverters::class)

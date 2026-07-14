@@ -3,6 +3,9 @@ package com.fitreplica.core.database
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+private const val DATABASE_VERSION_2 = 2
+private const val DATABASE_VERSION_3 = 3
+
 // Adds the rest of the v1 schema (outfits, laundry loads, images, FTS4 search) on top
 // of the Phase 0 subset (clothing_items, wear_events). Purely additive — no existing
 // column changes — but hand-written rather than @AutoMigration because the FTS4 table
@@ -18,6 +21,13 @@ val MIGRATION_1_2 =
             createImagesTable(db)
             addWearEventOutfitForeignKey(db)
             createFtsSearch(db)
+        }
+    }
+
+val MIGRATION_2_3 =
+    object : Migration(DATABASE_VERSION_2, DATABASE_VERSION_3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            addWearEventSnapshotFields(db)
         }
     }
 
@@ -135,6 +145,31 @@ private fun addWearEventOutfitForeignKey(db: SupportSQLiteDatabase) {
     db.execSQL("ALTER TABLE `wear_events_new` RENAME TO `wear_events`")
     db.execSQL("CREATE INDEX IF NOT EXISTS `index_wear_events_itemId` ON `wear_events` (`itemId`)")
     db.execSQL("CREATE INDEX IF NOT EXISTS `index_wear_events_outfitId` ON `wear_events` (`outfitId`)")
+}
+
+private fun addWearEventSnapshotFields(db: SupportSQLiteDatabase) {
+    db.execSQL("ALTER TABLE `wear_events` ADD COLUMN `itemName` TEXT NOT NULL DEFAULT ''")
+    db.execSQL("ALTER TABLE `wear_events` ADD COLUMN `itemType` TEXT NOT NULL DEFAULT 'OTHER'")
+    db.execSQL("ALTER TABLE `wear_events` ADD COLUMN `colorPrimary` TEXT NOT NULL DEFAULT ''")
+    db.execSQL(
+        """
+        UPDATE `wear_events`
+        SET
+            `itemName` = COALESCE(
+                (SELECT `name` FROM `clothing_items` WHERE `clothing_items`.`id` = `wear_events`.`itemId`),
+                ''
+            ),
+            `itemType` = COALESCE(
+                (SELECT `type` FROM `clothing_items` WHERE `clothing_items`.`id` = `wear_events`.`itemId`),
+                'OTHER'
+            ),
+            `colorPrimary` = COALESCE(
+                (SELECT `colorPrimary` FROM `clothing_items` WHERE `clothing_items`.`id` = `wear_events`.`itemId`),
+                ''
+            )
+        """.trimIndent(),
+    )
+    db.execSQL("CREATE INDEX IF NOT EXISTS `index_wear_events_dateTime` ON `wear_events` (`dateTime`)")
 }
 
 // Room only auto-creates the FTS4 content-sync triggers via onCreate on a fresh

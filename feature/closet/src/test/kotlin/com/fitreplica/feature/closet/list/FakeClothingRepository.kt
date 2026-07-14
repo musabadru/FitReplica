@@ -6,6 +6,9 @@ import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.OutfitId
+import com.fitreplica.core.model.WearEventId
+import com.fitreplica.core.model.WearHistoryEntry
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.map
 // test sourceSet and isn't published as a test fixture, so it isn't visible here.
 class FakeClothingRepository : ClothingRepository {
     private val items = MutableStateFlow<List<ClothingItem>>(emptyList())
+    val wearHistory = MutableStateFlow<List<WearHistoryEntry>>(emptyList())
     val wearLog = mutableListOf<Triple<ClothingId, OutfitId?, String?>>()
 
     override fun observeItems(filter: ClosetFilter) =
@@ -28,6 +32,8 @@ class FakeClothingRepository : ClothingRepository {
         }
 
     override fun observeItem(itemId: ClothingId) = items.map { list -> list.find { it.id == itemId } }
+
+    override fun observeWearHistory(): Flow<List<WearHistoryEntry>> = wearHistory
 
     override suspend fun addItem(item: ClothingItem) {
         items.value = items.value + item
@@ -47,6 +53,21 @@ class FakeClothingRepository : ClothingRepository {
         context: String?,
     ) {
         wearLog += Triple(itemId, outfitId, context)
+        val item = items.value.firstOrNull { it.id == itemId } ?: return
+        wearHistory.value =
+            listOf(
+                WearHistoryEntry(
+                    id = WearEventId("fake-wear-${wearLog.size}"),
+                    itemId = itemId,
+                    itemName = item.name,
+                    itemType = item.type,
+                    colorPrimary = item.colorPrimary,
+                    outfitId = outfitId,
+                    wornAt = wearLog.size.toLong(),
+                    context = context,
+                    notes = null,
+                ),
+            ) + wearHistory.value
     }
 
     override suspend fun updateCondition(

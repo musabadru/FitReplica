@@ -91,5 +91,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.hilt.navigation.compose)
 }

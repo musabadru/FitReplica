@@ -31,6 +31,24 @@ abstract class ClothingDao {
     @Query("SELECT * FROM clothing_items ORDER BY addedAt DESC")
     abstract fun observeItems(): Flow<List<ClothingItemEntity>>
 
+    @Query(
+        """
+        SELECT
+            wear_events.id AS id,
+            wear_events.itemId AS itemId,
+            wear_events.itemName AS itemName,
+            wear_events.itemType AS itemType,
+            wear_events.colorPrimary AS colorPrimary,
+            wear_events.outfitId AS outfitId,
+            wear_events.dateTime AS wornAt,
+            wear_events.context AS context,
+            wear_events.notes AS notes
+        FROM wear_events
+        ORDER BY wear_events.dateTime DESC
+        """,
+    )
+    abstract fun observeWearHistory(): Flow<List<WearHistoryRow>>
+
     // Structured filters only — combined with FTS search in searchItems below.
     // Nullable-bind pattern (`:x IS NULL OR column = :x`) lets one query serve every
     // filter combination without building a query at runtime.
@@ -95,9 +113,26 @@ abstract class ClothingDao {
         itemId: ClothingId,
         event: WearEventEntity,
     ) {
-        insertWearEvent(event)
+        val snapshot = requireNotNull(wearItemSnapshot(itemId))
+        insertWearEvent(
+            event.copy(
+                itemId = itemId,
+                itemName = snapshot.itemName,
+                itemType = snapshot.itemType,
+                colorPrimary = snapshot.colorPrimary,
+            ),
+        )
         updateLastWorn(itemId, event.dateTime)
     }
+
+    @Query(
+        """
+        SELECT name AS itemName, type AS itemType, colorPrimary AS colorPrimary
+        FROM clothing_items
+        WHERE id = :itemId
+        """,
+    )
+    internal abstract suspend fun wearItemSnapshot(itemId: ClothingId): WearItemSnapshot?
 
     @Insert
     abstract suspend fun insertWearEvent(event: WearEventEntity)
@@ -108,3 +143,9 @@ abstract class ClothingDao {
         wornAt: Long,
     )
 }
+
+internal data class WearItemSnapshot(
+    val itemName: String,
+    val itemType: ClothingType,
+    val colorPrimary: String,
+)

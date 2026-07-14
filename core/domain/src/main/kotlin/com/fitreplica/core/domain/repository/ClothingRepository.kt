@@ -4,12 +4,15 @@ import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.OutfitId
+import com.fitreplica.core.model.WearHistoryEntry
 import kotlinx.coroutines.flow.Flow
 
 interface ClothingRepository {
     fun observeItems(filter: ClosetFilter = ClosetFilter()): Flow<List<ClothingItem>>
 
     fun observeItem(itemId: ClothingId): Flow<ClothingItem?>
+
+    fun observeWearHistory(): Flow<List<WearHistoryEntry>>
 
     suspend fun addItem(item: ClothingItem)
 
