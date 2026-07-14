@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/musabadru/FitReplica/compare/v0.4.0...v0.5.0) (2026-07-14)
+
+
+### Features
+
+* implement milestone 3 workflows ([#56](https://github.com/musabadru/FitReplica/issues/56)) ([0dffd0b](https://github.com/musabadru/FitReplica/commit/0dffd0b3223a48b195d2ea89b0c5b05f942b0a1f))
+
 ## [0.4.0](https://github.com/musabadru/FitReplica/compare/v0.3.0...v0.4.0) (2026-07-14)
 
 
