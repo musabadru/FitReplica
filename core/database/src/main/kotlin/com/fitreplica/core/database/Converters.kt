@@ -12,6 +12,7 @@ import com.fitreplica.core.model.SizeSystem
 import com.fitreplica.core.model.Status
 import com.fitreplica.core.model.WearEventId
 
+@Suppress("TooManyFunctions")
 class Converters {
     @TypeConverter
     fun fromClothingId(id: ClothingId?): String? = id?.value

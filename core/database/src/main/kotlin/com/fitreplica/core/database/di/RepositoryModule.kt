@@ -1,7 +1,7 @@
 package com.fitreplica.core.database.di
 
-import com.fitreplica.core.database.repository.ClothingRepositoryImpl
 import com.fitreplica.core.database.repository.AnalyticsRepositoryImpl
+import com.fitreplica.core.database.repository.ClothingRepositoryImpl
 import com.fitreplica.core.database.repository.ImageRepositoryImpl
 import com.fitreplica.core.database.repository.LaundryRepositoryImpl
 import com.fitreplica.core.domain.repository.AnalyticsRepository

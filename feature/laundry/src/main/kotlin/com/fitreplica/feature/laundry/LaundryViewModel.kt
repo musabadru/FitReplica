@@ -42,7 +42,10 @@ class LaundryViewModel
         private val dirtyItems =
             clothingRepository.observeItems(ClosetFilter(status = Status.DIRTY))
                 .onEach { items ->
-                    val eligibleIds = items.filterNot { it.condition == Condition.RETIRED }.mapTo(mutableSetOf()) { it.id }
+                    val eligibleIds =
+                        items
+                            .filterNot { it.condition == Condition.RETIRED }
+                            .mapTo(mutableSetOf()) { it.id }
                     selectedItemIds.value = selectedItemIds.value.intersect(eligibleIds)
                 }
                 .map { items -> items.filterNot { it.condition == Condition.RETIRED } }

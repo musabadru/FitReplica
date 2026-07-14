@@ -6,6 +6,9 @@ import com.fitreplica.metadata.api.CareTagScanResult
 import com.fitreplica.metadata.api.CareTagSymbol
 import javax.inject.Inject
 
+private const val COLD_WASH_MAX_CELSIUS = 30
+private const val WARM_WASH_MAX_CELSIUS = 40
+
 class CareTagOcrParser
     @Inject
     constructor() : CareTagMetadataProvider {
@@ -56,23 +59,28 @@ private fun buildRequirements(
     text: String,
     temperature: Int?,
 ): List<CareRequirement> =
-    buildList {
-        when {
-            text.hasNoWash -> add(CareRequirement.DO_NOT_WASH)
-            "dry clean" in text -> add(CareRequirement.DRY_CLEAN_ONLY)
-            text.hasHandWash -> add(CareRequirement.HAND_WASH_ONLY)
-            temperature != null && temperature <= 30 -> add(CareRequirement.COLD_WASH)
-            temperature != null && temperature <= 40 -> add(CareRequirement.WARM_WASH)
-            temperature != null -> add(CareRequirement.HOT_WASH)
-        }
-        if ("air dry" in text || "line dry" in text || text.hasNoTumbleDry) add(CareRequirement.AIR_DRY)
-        if ("low heat" in text) add(CareRequirement.LOW_HEAT)
-        if (text.hasNoBleach) add(CareRequirement.AVOID_BLEACH)
-        if (text.hasNoIron) add(CareRequirement.AVOID_IRON)
-    }.distinct()
+    listOfNotNull(
+        text.washRequirement(temperature),
+        CareRequirement.AIR_DRY.takeIf { text.requiresAirDry },
+        CareRequirement.LOW_HEAT.takeIf { "low heat" in text },
+        CareRequirement.AVOID_BLEACH.takeIf { text.hasNoBleach },
+        CareRequirement.AVOID_IRON.takeIf { text.hasNoIron },
+    ).distinct()
+
+private fun String.washRequirement(temperature: Int?): CareRequirement? =
+    when {
+        hasNoWash -> CareRequirement.DO_NOT_WASH
+        "dry clean" in this -> CareRequirement.DRY_CLEAN_ONLY
+        hasHandWash -> CareRequirement.HAND_WASH_ONLY
+        temperature != null && temperature <= COLD_WASH_MAX_CELSIUS -> CareRequirement.COLD_WASH
+        temperature != null && temperature <= WARM_WASH_MAX_CELSIUS -> CareRequirement.WARM_WASH
+        temperature != null -> CareRequirement.HOT_WASH
+        else -> null
+    }
 
 private val String.hasNoWash: Boolean get() = "do not wash" in this || "no wash" in this
 private val String.hasHandWash: Boolean get() = "hand wash" in this
 private val String.hasNoTumbleDry: Boolean get() = "do not tumble" in this || "no tumble" in this
 private val String.hasNoIron: Boolean get() = "do not iron" in this || "no iron" in this
 private val String.hasNoBleach: Boolean get() = "do not bleach" in this || "no bleach" in this
+private val String.requiresAirDry: Boolean get() = "air dry" in this || "line dry" in this || hasNoTumbleDry

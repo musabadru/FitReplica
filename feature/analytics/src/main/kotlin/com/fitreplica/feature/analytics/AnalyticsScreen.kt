@@ -25,6 +25,8 @@ import com.fitreplica.core.model.RepairTime
 import com.fitreplica.core.model.WearStreak
 import java.util.concurrent.TimeUnit
 
+private const val TOP_ANALYTICS_ITEMS = 5
+
 @Composable
 fun AnalyticsScreen(
     modifier: Modifier = Modifier,
@@ -87,7 +89,7 @@ private fun ClosetAnalyticsSection(analytics: ClosetAnalytics) {
         MetricRow("Types", analytics.typeDistribution.entries.joinToString { "${it.key}: ${it.value}" })
         if (analytics.costPerWear.isNotEmpty()) {
             Text("Cost per wear", style = MaterialTheme.typography.titleMedium)
-            analytics.costPerWear.take(5).forEach {
+            analytics.costPerWear.take(TOP_ANALYTICS_ITEMS).forEach {
                 MetricRow(it.itemName, "%.2f".format(it.costPerWear))
             }
         }
@@ -104,7 +106,9 @@ private fun WearStreakSection(streaks: List<WearStreak>) {
         if (streaks.isEmpty()) {
             Text("No wear history yet.")
         } else {
-            streaks.take(5).forEach { MetricRow(it.itemName, "${it.streakLength} ${it.interval.name.lowercase()}s") }
+            streaks.take(TOP_ANALYTICS_ITEMS).forEach {
+                MetricRow(it.itemName, "${it.streakLength} ${it.interval.name.lowercase()}s")
+            }
         }
     }
 }
@@ -119,7 +123,7 @@ private fun RepairSection(repairs: List<RepairTime>) {
         if (repairs.isEmpty()) {
             Text("No repair cycles yet.")
         } else {
-            repairs.take(5).forEach { repair ->
+            repairs.take(TOP_ANALYTICS_ITEMS).forEach { repair ->
                 MetricRow(repair.itemName.orEmpty(), repair.durationLabel())
             }
         }
@@ -128,11 +132,13 @@ private fun RepairSection(repairs: List<RepairTime>) {
 
 private fun RepairTime.durationLabel(): String {
     val days = TimeUnit.MILLISECONDS.toDays(durationMillis)
-    if (days > 0) return "$days days"
     val hours = TimeUnit.MILLISECONDS.toHours(durationMillis)
-    if (hours > 0) return "$hours hours"
     val minutes = TimeUnit.MILLISECONDS.toMinutes(durationMillis).coerceAtLeast(1)
-    return "$minutes minutes"
+    return when {
+        days > 0 -> "$days days"
+        hours > 0 -> "$hours hours"
+        else -> "$minutes minutes"
+    }
 }
 
 @Composable

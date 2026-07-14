@@ -116,11 +116,14 @@ abstract class ClothingDao {
         itemId: ClothingId,
         event: ConditionEventEntity,
     ): Boolean {
-        val previous = getCondition(itemId) ?: return false
-        if (previous == event.newCondition) return false
-        insertConditionEvent(event.copy(previousCondition = previous))
-        updateConditionOnly(itemId, event.newCondition)
-        return true
+        val previous = getCondition(itemId)
+        return if (previous == null || previous == event.newCondition) {
+            false
+        } else {
+            insertConditionEvent(event.copy(previousCondition = previous))
+            updateConditionOnly(itemId, event.newCondition)
+            true
+        }
     }
 
     @Query("SELECT * FROM condition_events WHERE itemId = :itemId ORDER BY changedAt DESC, id DESC")
