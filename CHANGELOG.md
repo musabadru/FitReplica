@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/musabadru/FitReplica/compare/v0.3.0...v0.4.0) (2026-07-14)
+
+
+### Features
+
+* complete phase 1 wrap-up ([9594743](https://github.com/musabadru/FitReplica/commit/959474355e9f6b3b2bc454f999d0c3b64cefc0f5))
+
 ## [0.3.0](https://github.com/musabadru/FitReplica/compare/v0.2.0...v0.3.0) (2026-07-11)
 
 
