@@ -13,4 +13,5 @@ data class AnalyticsUiState(
     val contextBreakdown: List<ContextBreakdown> = emptyList(),
     val suggestions: List<OutfitSuggestion> = emptyList(),
     val isLoading: Boolean = true,
+    val errorMessage: String? = null,
 )

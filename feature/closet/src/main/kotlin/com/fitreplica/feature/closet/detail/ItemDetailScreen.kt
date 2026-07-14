@@ -153,6 +153,7 @@ fun ItemDetailScreen(
                 )
                 Button(
                     onClick = { viewModel.onAction(ItemDetailUiAction.OnWearNowClicked) },
+                    enabled = item.condition != Condition.RETIRED,
                     shape = WardrobeExpressiveCtaShape,
                     colors = ButtonDefaults.buttonColors(),
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),

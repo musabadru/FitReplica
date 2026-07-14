@@ -1,5 +1,6 @@
 package com.fitreplica.feature.analytics
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitreplica.core.domain.repository.ClothingRepository
@@ -11,12 +12,15 @@ import com.fitreplica.core.domain.usecase.GetWearStreakUseCase
 import com.fitreplica.core.model.SuggestionContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
+private const val TAG = "AnalyticsViewModel"
+private const val ANALYTICS_ERROR = "Couldn't load analytics. Try again."
 
 @HiltViewModel
 class AnalyticsViewModel
@@ -49,6 +53,14 @@ class AnalyticsViewModel
                     contextBreakdown = contexts,
                     suggestions = suggestions,
                     isLoading = false,
+                )
+            }.catch { throwable ->
+                Log.w(TAG, "Failed to load analytics", throwable)
+                emit(
+                    AnalyticsUiState(
+                        isLoading = false,
+                        errorMessage = ANALYTICS_ERROR,
+                    ),
                 )
             }.stateIn(
                 scope = viewModelScope,

@@ -123,7 +123,7 @@ private fun String.toFtsQuery(): String =
         .filter { it.isNotBlank() }
         .joinToString(separator = " ") { term -> "$term*" }
 
-private fun ClothingItemEntity.toDomain(): ClothingItem =
+internal fun ClothingItemEntity.toDomain(): ClothingItem =
     ClothingItem(
         id = id,
         name = name,

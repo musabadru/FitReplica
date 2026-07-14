@@ -9,6 +9,7 @@ import com.fitreplica.core.domain.repository.LaundryRepository
 import com.fitreplica.core.domain.usecase.CompleteLaundryLoadUseCase
 import com.fitreplica.core.domain.usecase.CreateLaundryLoadUseCase
 import com.fitreplica.core.model.ClothingId
+import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.LaundryLoadId
 import com.fitreplica.core.model.Status
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -34,20 +37,30 @@ class LaundryViewModel
         private val completeLaundryLoadUseCase: CompleteLaundryLoadUseCase,
     ) : ViewModel() {
         private val selectedItemIds = MutableStateFlow<Set<ClothingId>>(emptySet())
+        private val isCreatingLoad = MutableStateFlow(false)
         private val errorMessage = MutableStateFlow<String?>(null)
+        private val dirtyItems =
+            clothingRepository.observeItems(ClosetFilter(status = Status.DIRTY))
+                .onEach { items ->
+                    val eligibleIds = items.filterNot { it.condition == Condition.RETIRED }.mapTo(mutableSetOf()) { it.id }
+                    selectedItemIds.value = selectedItemIds.value.intersect(eligibleIds)
+                }
+                .map { items -> items.filterNot { it.condition == Condition.RETIRED } }
 
         val uiState =
             combine(
-                clothingRepository.observeItems(ClosetFilter(status = Status.DIRTY)),
+                dirtyItems,
                 laundryRepository.observeLoads(),
                 selectedItemIds,
+                isCreatingLoad,
                 errorMessage,
-            ) { dirtyItems, loads, selectedIds, error ->
+            ) { dirtyItems, loads, selectedIds, isCreating, error ->
                 LaundryUiState(
                     dirtyItems = dirtyItems,
                     loads = loads,
                     selectedItemIds = selectedIds,
                     isLoading = false,
+                    isCreatingLoad = isCreating,
                     errorMessage = error,
                 )
             }.stateIn(
@@ -78,16 +91,26 @@ class LaundryViewModel
 
         @Suppress("TooGenericExceptionCaught")
         private fun createLoad() {
+            if (isCreatingLoad.value) return
+            val eligibleIds = uiState.value.dirtyItems.mapTo(mutableSetOf()) { it.id }
+            val itemIds = selectedItemIds.value.intersect(eligibleIds)
+            if (itemIds.isEmpty()) {
+                selectedItemIds.value = emptySet()
+                return
+            }
             viewModelScope.launch {
                 errorMessage.value = null
+                isCreatingLoad.value = true
                 try {
-                    createLaundryLoadUseCase(selectedItemIds.value.toList())
+                    createLaundryLoadUseCase(itemIds.toList())
                     selectedItemIds.value = emptySet()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to create laundry load", e)
                     errorMessage.value = LAUNDRY_ERROR
+                } finally {
+                    isCreatingLoad.value = false
                 }
             }
         }

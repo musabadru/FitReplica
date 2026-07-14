@@ -27,6 +27,7 @@ class RuleEngine
                 .filter { it.status == Status.CLEAN }
                 .filterNot { it.condition == Condition.RETIRED }
                 .filter { context.preferredTypes.isEmpty() || it.type in context.preferredTypes }
+                .filter { item -> tags.isEmpty() || tags.all { tag -> item.matchesTag(tag) } }
                 .sortedWith(compareBy<ClothingItem> { it.timesWorn }.thenByDescending { it.addedAt })
                 .take(MAX_SUGGESTIONS)
                 .mapIndexed { index, item ->
@@ -47,3 +48,9 @@ class RuleEngine
     }
 
 private fun com.fitreplica.core.model.WeatherSnapshot?.orEmptyTags(): Set<String> = this?.conditionTags.orEmpty()
+
+private fun ClothingItem.matchesTag(tag: String): Boolean {
+    val normalized = tag.lowercase()
+    return listOfNotNull(name, brand, colorPrimary, colorSecondary, type.name, notes)
+        .any { value -> value.lowercase().contains(normalized) }
+}

@@ -123,8 +123,8 @@ class CascadeDeleteTest {
         runTest {
             insertItem()
             insertLaundryLoad()
-            database.laundryDao().insertLoadItemCrossRef(
-                LaundryLoadItemCrossRef(loadId = LaundryLoadId("load-1"), itemId = itemId),
+            database.laundryDao().insertLoadItemCrossRefs(
+                listOf(LaundryLoadItemCrossRef(loadId = LaundryLoadId("load-1"), itemId = itemId)),
             )
 
             deleteItem()
@@ -137,8 +137,8 @@ class CascadeDeleteTest {
         runTest {
             insertItem()
             insertLaundryLoad()
-            database.laundryDao().insertLoadItemCrossRef(
-                LaundryLoadItemCrossRef(loadId = LaundryLoadId("load-1"), itemId = itemId),
+            database.laundryDao().insertLoadItemCrossRefs(
+                listOf(LaundryLoadItemCrossRef(loadId = LaundryLoadId("load-1"), itemId = itemId)),
             )
 
             database.laundryDao().deleteLoad(LaundryLoadId("load-1"))

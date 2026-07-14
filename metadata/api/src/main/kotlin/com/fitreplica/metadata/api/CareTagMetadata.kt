@@ -25,6 +25,7 @@ enum class CareTagSymbol {
 }
 
 enum class CareRequirement {
+    DO_NOT_WASH,
     COLD_WASH,
     WARM_WASH,
     HOT_WASH,

@@ -17,8 +17,13 @@ data class ItemCostPerWear(
 data class WearStreak(
     val itemId: ClothingId,
     val itemName: String,
-    val wearCount: Int,
+    val streakLength: Int,
+    val interval: WearStreakInterval,
 )
+
+enum class WearStreakInterval {
+    DAY,
+}
 
 data class RepairTime(
     val itemId: ClothingId,

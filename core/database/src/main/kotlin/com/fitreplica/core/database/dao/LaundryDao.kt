@@ -18,7 +18,7 @@ abstract class LaundryDao {
     abstract suspend fun insertLoad(load: LaundryLoadEntity)
 
     @Insert
-    abstract suspend fun insertLoadItemCrossRef(crossRef: LaundryLoadItemCrossRef)
+    abstract suspend fun insertLoadItemCrossRefs(crossRefs: List<LaundryLoadItemCrossRef>)
 
     @Query("SELECT * FROM laundry_loads ORDER BY startedAt DESC")
     abstract fun observeLoads(): Flow<List<LaundryLoadEntity>>
@@ -36,8 +36,10 @@ abstract class LaundryDao {
         itemIds: List<ClothingId>,
     ) {
         insertLoad(load)
-        itemIds.forEach { itemId -> insertLoadItemCrossRef(LaundryLoadItemCrossRef(load.id, itemId)) }
-        updateItemStatus(itemIds, Status.IN_LAUNDRY)
+        if (itemIds.isNotEmpty()) {
+            insertLoadItemCrossRefs(itemIds.map { itemId -> LaundryLoadItemCrossRef(load.id, itemId) })
+            updateItemStatus(itemIds, Status.IN_LAUNDRY)
+        }
     }
 
     @Transaction
@@ -46,7 +48,8 @@ abstract class LaundryDao {
         completedAt: Long,
     ) {
         completeLoadOnly(loadId, completedAt)
-        updateItemStatus(getLoadItemIds(loadId), Status.CLEAN)
+        val itemIds = getLoadItemIds(loadId)
+        if (itemIds.isNotEmpty()) updateItemStatus(itemIds, Status.CLEAN)
     }
 
     @Query("UPDATE laundry_loads SET completedAt = :completedAt WHERE id = :loadId")

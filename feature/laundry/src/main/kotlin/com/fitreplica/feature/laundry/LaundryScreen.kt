@@ -1,5 +1,6 @@
 package com.fitreplica.feature.laundry
 
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitreplica.core.model.ClothingId
@@ -65,14 +67,39 @@ fun LaundryScreen(
                     }
                 }
                 item {
-                    DirtyItemsSection(
-                        dirtyItems = uiState.dirtyItems,
-                        selectedIds = uiState.selectedItemIds,
-                        onSelectionChanged = { itemId, selected ->
-                            viewModel.onAction(LaundryUiAction.OnItemSelectionChanged(itemId, selected))
-                        },
-                        onCreateLoad = { viewModel.onAction(LaundryUiAction.OnCreateLoadClicked) },
+                    Text(
+                        "Dirty items",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
+                }
+                if (uiState.dirtyItems.isEmpty()) {
+                    item {
+                        Text(
+                            "Nothing dirty right now.",
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                } else {
+                    items(uiState.dirtyItems, key = { it.id.value }) { item ->
+                        DirtyItemRow(
+                            item = item,
+                            selected = item.id in uiState.selectedItemIds,
+                            onSelectionChanged = { itemId, selected ->
+                                viewModel.onAction(LaundryUiAction.OnItemSelectionChanged(itemId, selected))
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item {
+                        Button(
+                            onClick = { viewModel.onAction(LaundryUiAction.OnCreateLoadClicked) },
+                            enabled = uiState.selectedItemIds.isNotEmpty() && !uiState.isCreatingLoad,
+                            modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+                        ) {
+                            Text("Create load")
+                        }
+                    }
                 }
                 item { HorizontalDivider() }
                 item {
@@ -105,40 +132,28 @@ fun LaundryScreen(
 }
 
 @Composable
-private fun DirtyItemsSection(
-    dirtyItems: List<ClothingItem>,
-    selectedIds: Set<ClothingId>,
+private fun DirtyItemRow(
+    item: ClothingItem,
+    selected: Boolean,
     onSelectionChanged: (ClothingId, Boolean) -> Unit,
-    onCreateLoad: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = selected,
+                    role = Role.Checkbox,
+                    onValueChange = { checked -> onSelectionChanged(item.id, checked) },
+                ),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Dirty items", style = MaterialTheme.typography.titleLarge)
-        if (dirtyItems.isEmpty()) {
-            Text("Nothing dirty right now.")
-        } else {
-            dirtyItems.forEach { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = item.id in selectedIds,
-                        onCheckedChange = { selected -> onSelectionChanged(item.id, selected) },
-                    )
-                    Text(item.name, modifier = Modifier.weight(1f))
-                }
-            }
-            Button(
-                onClick = onCreateLoad,
-                enabled = selectedIds.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Create load")
-            }
-        }
+        Checkbox(
+            checked = selected,
+            onCheckedChange = null,
+        )
+        Text(item.name, modifier = Modifier.weight(1f))
     }
 }
 

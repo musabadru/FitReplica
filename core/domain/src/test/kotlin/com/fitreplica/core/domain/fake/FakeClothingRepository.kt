@@ -6,16 +6,17 @@ import com.fitreplica.core.model.ClothingId
 import com.fitreplica.core.model.ClothingItem
 import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.ConditionEvent
+import com.fitreplica.core.model.ConditionEventId
 import com.fitreplica.core.model.OutfitId
 import com.fitreplica.core.model.WearEventId
 import com.fitreplica.core.model.WearHistoryEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 class FakeClothingRepository : ClothingRepository {
     private val items = MutableStateFlow<List<ClothingItem>>(emptyList())
+    private val conditionEvents = MutableStateFlow<List<ConditionEvent>>(emptyList())
     val wearHistory = MutableStateFlow<List<WearHistoryEntry>>(emptyList())
 
     val wearLog = mutableListOf<Triple<ClothingId, OutfitId?, String?>>()
@@ -68,13 +69,27 @@ class FakeClothingRepository : ClothingRepository {
         condition: Condition,
         notes: String?,
     ) {
+        val current = items.value.firstOrNull { it.id == itemId } ?: return
+        if (current.condition == condition) return
         items.value =
             items.value.map { item ->
                 if (item.id == itemId) item.copy(condition = condition) else item
             }
+        conditionEvents.value =
+            listOf(
+                ConditionEvent(
+                    id = ConditionEventId("fake-condition-${conditionEvents.value.size + 1}"),
+                    itemId = itemId,
+                    previousCondition = current.condition,
+                    newCondition = condition,
+                    changedAt = conditionEvents.value.size.toLong(),
+                    notes = notes,
+                ),
+            ) + conditionEvents.value
     }
 
-    override fun observeConditionEvents(itemId: ClothingId) = flowOf<List<ConditionEvent>>(emptyList())
+    override fun observeConditionEvents(itemId: ClothingId) =
+        conditionEvents.map { events -> events.filter { it.itemId == itemId } }
 }
 
 private fun ClothingItem.matches(filter: ClosetFilter): Boolean {

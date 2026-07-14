@@ -1,5 +1,7 @@
 package com.fitreplica.feature.laundry
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +22,9 @@ fun CareTagConfirmationScreen(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scrollState = rememberScrollState()
     Column(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier.verticalScroll(scrollState).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Care tag", style = MaterialTheme.typography.headlineSmall)

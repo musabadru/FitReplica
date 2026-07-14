@@ -27,4 +27,8 @@ class CareTagImageAnalyzer(
             .addOnFailureListener(onError)
             .addOnCompleteListener { imageProxy.close() }
     }
+
+    fun close() {
+        recognizer.close()
+    }
 }

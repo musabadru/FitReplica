@@ -9,5 +9,6 @@ data class LaundryUiState(
     val loads: List<LaundryLoad> = emptyList(),
     val selectedItemIds: Set<ClothingId> = emptySet(),
     val isLoading: Boolean = true,
+    val isCreatingLoad: Boolean = false,
     val errorMessage: String? = null,
 )

@@ -1,21 +1,21 @@
 package com.fitreplica.core.database.repository
 
 import com.fitreplica.core.database.dao.ClothingDao
-import com.fitreplica.core.database.entity.ClothingItemEntity
 import com.fitreplica.core.database.entity.ConditionEventEntity
 import com.fitreplica.core.database.entity.WearEventEntity
 import com.fitreplica.core.domain.repository.AnalyticsRepository
 import com.fitreplica.core.model.ClosetAnalytics
 import com.fitreplica.core.model.ClothingId
-import com.fitreplica.core.model.ClothingItem
+import com.fitreplica.core.model.Condition
 import com.fitreplica.core.model.ContextBreakdown
 import com.fitreplica.core.model.ItemCostPerWear
 import com.fitreplica.core.model.RepairTime
 import com.fitreplica.core.model.WearStreak
-import com.fitreplica.core.model.Condition
+import com.fitreplica.core.model.WearStreakInterval
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 private const val OVER_ROTATED_MIN_WEAR_COUNT = 5
@@ -32,15 +32,19 @@ class AnalyticsRepositoryImpl
                 clothingDao.observeConditionEvents(),
             ) { items, wearEvents, _ ->
                 val domainItems = items.map { it.toDomain() }
+                val wearCountsByItemId = wearEvents.groupingBy { it.itemId }.eachCount()
                 ClosetAnalytics(
-                    neverWorn = domainItems.filter { item -> wearEvents.none { it.itemId == item.id } },
-                    overRotated = domainItems.filter { it.timesWorn >= OVER_ROTATED_MIN_WEAR_COUNT },
+                    neverWorn = domainItems.filter { item -> wearCountsByItemId[item.id] == null },
+                    overRotated =
+                        domainItems.filter { item ->
+                            wearCountsByItemId.getOrDefault(item.id, 0) >= OVER_ROTATED_MIN_WEAR_COUNT
+                        },
                     colorDistribution = domainItems.groupingBy { it.colorPrimary }.eachCount(),
                     typeDistribution = domainItems.groupingBy { it.type }.eachCount(),
                     costPerWear =
                         domainItems.mapNotNull { item ->
                             val price = item.purchasePrice ?: return@mapNotNull null
-                            val wears = wearEvents.count { it.itemId == item.id }.coerceAtLeast(1)
+                            val wears = wearCountsByItemId.getOrDefault(item.id, 0).coerceAtLeast(1)
                             ItemCostPerWear(item.id, item.name, price / wears)
                         },
                 )
@@ -55,9 +59,10 @@ class AnalyticsRepositoryImpl
                         WearStreak(
                             itemId = itemId,
                             itemName = namesById[itemId].orEmpty(),
-                            wearCount = itemEvents.size,
+                            streakLength = itemEvents.longestConsecutiveDayStreak(),
+                            interval = WearStreakInterval.DAY,
                         )
-                    }.sortedByDescending { it.wearCount }
+                    }.sortedByDescending { it.streakLength }
             }
 
         override fun observeTimeToRepair(): Flow<List<RepairTime>> =
@@ -95,24 +100,18 @@ private fun List<ConditionEventEntity>.repairTimes(
     return results
 }
 
-private fun ClothingItemEntity.toDomain(): ClothingItem =
-    ClothingItem(
-        id = id,
-        name = name,
-        type = type,
-        brand = brand,
-        colorPrimary = colorPrimary,
-        colorSecondary = colorSecondary,
-        condition = condition,
-        status = status,
-        size = size,
-        timesWorn = timesWorn,
-        lastWornAt = lastWornAt,
-        addedAt = addedAt,
-        sku = sku,
-        avatarSlot = avatarSlot,
-        purchasePrice = purchasePrice,
-        purchaseDate = purchaseDate,
-        purchaseLocation = purchaseLocation,
-        notes = notes,
-    )
+private fun List<WearEventEntity>.longestConsecutiveDayStreak(): Int {
+    val days = map { event -> TimeUnit.MILLISECONDS.toDays(event.dateTime) }.distinct().sorted()
+    if (days.isEmpty()) return 0
+    var longest = 1
+    var current = 1
+    days.zipWithNext { previous, next ->
+        if (next == previous + 1) {
+            current += 1
+            longest = maxOf(longest, current)
+        } else {
+            current = 1
+        }
+    }
+    return longest
+}

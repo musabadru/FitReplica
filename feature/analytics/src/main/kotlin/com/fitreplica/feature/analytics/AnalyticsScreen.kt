@@ -23,6 +23,7 @@ import com.fitreplica.core.model.ContextBreakdown
 import com.fitreplica.core.model.OutfitSuggestion
 import com.fitreplica.core.model.RepairTime
 import com.fitreplica.core.model.WearStreak
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun AnalyticsScreen(
@@ -52,6 +53,15 @@ fun AnalyticsScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(16.dp),
             )
+        }
+        uiState.errorMessage?.let { message ->
+            item {
+                Text(
+                    message,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
         uiState.analytics?.let { analytics ->
             item { ClosetAnalyticsSection(analytics) }
@@ -94,7 +104,7 @@ private fun WearStreakSection(streaks: List<WearStreak>) {
         if (streaks.isEmpty()) {
             Text("No wear history yet.")
         } else {
-            streaks.take(5).forEach { MetricRow(it.itemName, it.wearCount.toString()) }
+            streaks.take(5).forEach { MetricRow(it.itemName, "${it.streakLength} ${it.interval.name.lowercase()}s") }
         }
     }
 }
@@ -110,10 +120,19 @@ private fun RepairSection(repairs: List<RepairTime>) {
             Text("No repair cycles yet.")
         } else {
             repairs.take(5).forEach { repair ->
-                MetricRow(repair.itemName.orEmpty(), "${repair.durationMillis / 86_400_000} days")
+                MetricRow(repair.itemName.orEmpty(), repair.durationLabel())
             }
         }
     }
+}
+
+private fun RepairTime.durationLabel(): String {
+    val days = TimeUnit.MILLISECONDS.toDays(durationMillis)
+    if (days > 0) return "$days days"
+    val hours = TimeUnit.MILLISECONDS.toHours(durationMillis)
+    if (hours > 0) return "$hours hours"
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(durationMillis).coerceAtLeast(1)
+    return "$minutes minutes"
 }
 
 @Composable
