@@ -147,6 +147,9 @@ internal data class MeasurementInputs(
             MeasurementField.Waist -> waistCm
             MeasurementField.Hip -> hipCm
         }.orEmpty()
+
+    val firstMissingField: MeasurementField?
+        get() = MeasurementField.entries.firstOrNull { textFor(it).isBlank() }
 }
 
 internal enum class MeasurementField { Height, Chest, Waist, Hip }

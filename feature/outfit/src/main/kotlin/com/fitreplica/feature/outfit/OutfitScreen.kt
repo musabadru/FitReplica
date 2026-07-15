@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -18,8 +20,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,6 +35,7 @@ import com.fitreplica.core.designsystem.component.WardrobeCard
 import com.fitreplica.core.designsystem.component.WardrobeEmptyState
 import com.fitreplica.core.designsystem.component.WardrobeStatusBadge
 import com.fitreplica.core.model.ClothingItem
+import kotlinx.coroutines.launch
 
 @Composable
 fun OutfitScreen(
@@ -53,8 +60,16 @@ private fun OutfitContent(
     onAction: (OutfitUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val measurementFocusRequesters =
+        remember {
+            MeasurementField.entries.associateWith { FocusRequester() }
+        }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
     ) {
@@ -62,6 +77,13 @@ private fun OutfitContent(
             AvatarPreview(
                 uiState = uiState,
                 avatarRenderer = avatarRenderer,
+                onMeasurementsClick = {
+                    val field = uiState.measurements.firstMissingField ?: MeasurementField.Height
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(AVATAR_CONFIGURATION_ITEM_INDEX)
+                        measurementFocusRequesters[field]?.requestFocus()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -70,6 +92,7 @@ private fun OutfitContent(
             AvatarConfiguration(
                 uiState = uiState,
                 onAction = onAction,
+                measurementFocusRequesters = measurementFocusRequesters,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -103,6 +126,7 @@ private fun OutfitContent(
 private fun AvatarPreview(
     uiState: OutfitUiState,
     avatarRenderer: AvatarRenderer,
+    onMeasurementsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     WardrobeCard(modifier = modifier) {
@@ -123,6 +147,19 @@ private fun AvatarPreview(
                 text = "${uiState.avatarState.outfit.size} item(s) selected",
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (uiState.measurements.firstMissingField != null) {
+                Text(
+                    text = "Complete body measurements to personalize the avatar preview.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = onMeasurementsClick,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Add body measurements")
+                }
+            }
         }
     }
 }
@@ -131,6 +168,7 @@ private fun AvatarPreview(
 private fun AvatarConfiguration(
     uiState: OutfitUiState,
     onAction: (OutfitUiAction) -> Unit,
+    measurementFocusRequesters: Map<MeasurementField, FocusRequester>,
     modifier: Modifier = Modifier,
 ) {
     WardrobeCard(modifier = modifier) {
@@ -152,21 +190,25 @@ private fun AvatarConfiguration(
                 label = "Height",
                 value = uiState.measurements.textFor(MeasurementField.Height),
                 onValueChange = { onAction(OutfitUiAction.OnMeasurementChanged(MeasurementField.Height, it)) },
+                modifier = Modifier.focusRequester(measurementFocusRequesters.getValue(MeasurementField.Height)),
             )
             MeasurementRow(
                 label = "Chest",
                 value = uiState.measurements.textFor(MeasurementField.Chest),
                 onValueChange = { onAction(OutfitUiAction.OnMeasurementChanged(MeasurementField.Chest, it)) },
+                modifier = Modifier.focusRequester(measurementFocusRequesters.getValue(MeasurementField.Chest)),
             )
             MeasurementRow(
                 label = "Waist",
                 value = uiState.measurements.textFor(MeasurementField.Waist),
                 onValueChange = { onAction(OutfitUiAction.OnMeasurementChanged(MeasurementField.Waist, it)) },
+                modifier = Modifier.focusRequester(measurementFocusRequesters.getValue(MeasurementField.Waist)),
             )
             MeasurementRow(
                 label = "Hip",
                 value = uiState.measurements.textFor(MeasurementField.Hip),
                 onValueChange = { onAction(OutfitUiAction.OnMeasurementChanged(MeasurementField.Hip, it)) },
+                modifier = Modifier.focusRequester(measurementFocusRequesters.getValue(MeasurementField.Hip)),
             )
         }
     }
@@ -248,3 +290,5 @@ internal fun String.filterMeasurementInput(): String {
         char.isDigit() || char == '.' && normalized.indexOf('.') == index
     }
 }
+
+private const val AVATAR_CONFIGURATION_ITEM_INDEX = 1
