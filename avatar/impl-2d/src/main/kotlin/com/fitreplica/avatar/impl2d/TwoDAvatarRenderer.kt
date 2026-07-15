@@ -43,7 +43,7 @@ internal class TwoDAvatarRenderer
             modifier: Modifier,
         ) {
             val context = LocalContext.current
-            val systemAnimatorScale = remember(context) { context.systemAnimatorScale() }
+            val systemAnimatorScale = context.systemAnimatorScale()
             val motionEnabled = isAvatarMotionEnabled(config.animationEnabled, systemAnimatorScale)
             val silhouette = remember(config) { selectSilhouette(config) }
             val layers = remember(outfit) { resolveAvatarLayers(outfit, AndroidAvatarDebugLogger) }
