@@ -41,12 +41,16 @@ data class AvatarConfig(
                 animationEnabled = animationEnabled,
             )
 
+        fun isSupportedHeightCm(value: Float): Boolean = value in MIN_HEIGHT_CM..MAX_HEIGHT_CM
+
+        fun isSupportedCircumferenceCm(value: Float): Boolean = value in MIN_CIRCUMFERENCE_CM..MAX_CIRCUMFERENCE_CM
+
         private fun Float?.usableHeightCm(): Float? {
-            return this?.takeIf { it in MIN_HEIGHT_CM..MAX_HEIGHT_CM }
+            return this?.takeIf { isSupportedHeightCm(it) }
         }
 
         private fun Float?.usableCircumferenceCm(): Float? {
-            return this?.takeIf { it in MIN_CIRCUMFERENCE_CM..MAX_CIRCUMFERENCE_CM }
+            return this?.takeIf { isSupportedCircumferenceCm(it) }
         }
     }
 }

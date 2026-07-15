@@ -78,7 +78,7 @@ private fun OutfitContent(
                 uiState = uiState,
                 avatarRenderer = avatarRenderer,
                 onMeasurementsClick = {
-                    val field = uiState.measurements.firstMissingField ?: MeasurementField.Height
+                    val field = uiState.measurements.firstInvalidField ?: MeasurementField.Height
                     coroutineScope.launch {
                         listState.animateScrollToItem(AVATAR_CONFIGURATION_ITEM_INDEX)
                         measurementFocusRequesters[field]?.requestFocus()
@@ -147,7 +147,7 @@ private fun AvatarPreview(
                 text = "${uiState.avatarState.outfit.size} item(s) selected",
                 style = MaterialTheme.typography.bodySmall,
             )
-            if (uiState.measurements.firstMissingField != null) {
+            if (uiState.measurements.firstInvalidField != null) {
                 Text(
                     text = "Complete body measurements to personalize the avatar preview.",
                     style = MaterialTheme.typography.bodyMedium,

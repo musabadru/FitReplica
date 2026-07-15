@@ -148,8 +148,18 @@ internal data class MeasurementInputs(
             MeasurementField.Hip -> hipCm
         }.orEmpty()
 
-    val firstMissingField: MeasurementField?
-        get() = MeasurementField.entries.firstOrNull { textFor(it).isBlank() }
+    val firstInvalidField: MeasurementField?
+        get() =
+            MeasurementField.entries.firstOrNull { field ->
+                val value = textFor(field).toFloatOrNull()
+                when (field) {
+                    MeasurementField.Height -> value?.let(AvatarConfig::isSupportedHeightCm) != true
+                    MeasurementField.Chest,
+                    MeasurementField.Waist,
+                    MeasurementField.Hip,
+                    -> value?.let(AvatarConfig::isSupportedCircumferenceCm) != true
+                }
+            }
 }
 
 internal enum class MeasurementField { Height, Chest, Waist, Hip }
