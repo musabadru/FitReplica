@@ -4,6 +4,7 @@ import com.fitreplica.core.domain.repository.AvatarConfigData
 import com.fitreplica.core.domain.repository.ThemeMode
 import com.fitreplica.core.domain.repository.UserPreferencesData
 import com.fitreplica.core.domain.repository.UserPreferencesRepository
+import com.fitreplica.core.model.ClothingId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -56,5 +57,9 @@ private class FakeUserPreferencesRepository(
 
     override suspend fun setAvatarConfig(config: AvatarConfigData) {
         state.value = state.value.copy(avatarConfig = config)
+    }
+
+    override suspend fun setSelectedOutfitItemIds(itemIds: List<ClothingId>) {
+        state.value = state.value.copy(selectedOutfitItemIds = itemIds)
     }
 }

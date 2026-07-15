@@ -5,6 +5,7 @@ import com.fitreplica.core.domain.repository.AvatarConfigData
 import com.fitreplica.core.domain.repository.ThemeMode
 import com.fitreplica.core.domain.repository.UserPreferencesData
 import com.fitreplica.core.domain.repository.UserPreferencesRepository
+import com.fitreplica.core.model.ClothingId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -22,6 +23,7 @@ class UserPreferencesRepositoryImpl
                     metadataModuleEnabled = proto.metadataModuleEnabled,
                     animationsEnabled = proto.animationsEnabled,
                     avatarConfig = if (proto.hasAvatarConfig()) proto.avatarConfig.toDomain() else AvatarConfigData(),
+                    selectedOutfitItemIds = proto.selectedOutfitItemIdsList.map(::ClothingId),
                 )
             }
 
@@ -44,6 +46,15 @@ class UserPreferencesRepositoryImpl
         override suspend fun setAvatarConfig(config: AvatarConfigData) {
             userPreferencesStore.updateData {
                 it.toBuilder().setAvatarConfig(config.toProto()).build()
+            }
+        }
+
+        override suspend fun setSelectedOutfitItemIds(itemIds: List<ClothingId>) {
+            userPreferencesStore.updateData {
+                it.toBuilder()
+                    .clearSelectedOutfitItemIds()
+                    .addAllSelectedOutfitItemIds(itemIds.map { itemId -> itemId.value })
+                    .build()
             }
         }
     }

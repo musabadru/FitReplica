@@ -42,7 +42,8 @@ internal class TwoDAvatarRenderer
             animationState: AvatarAnimationState,
             modifier: Modifier,
         ) {
-            val systemAnimatorScale = LocalContext.current.systemAnimatorScale()
+            val context = LocalContext.current
+            val systemAnimatorScale = remember(context) { context.systemAnimatorScale() }
             val motionEnabled = isAvatarMotionEnabled(config.animationEnabled, systemAnimatorScale)
             val silhouette = remember(config) { selectSilhouette(config) }
             val layers = remember(outfit) { resolveAvatarLayers(outfit, AndroidAvatarDebugLogger) }
@@ -69,7 +70,9 @@ internal class TwoDAvatarRenderer
                     pose = pose,
                     path = bodyPath,
                 )
-                layerColors.forEach { layer ->
+                var layerIndex = 0
+                while (layerIndex < layerColors.size) {
+                    val layer = layerColors[layerIndex]
                     drawGarmentLayer(
                         layer = layer.layer,
                         color = layer.color,
@@ -78,6 +81,7 @@ internal class TwoDAvatarRenderer
                         pose = pose,
                         path = garmentPath,
                     )
+                    layerIndex++
                 }
             }
         }

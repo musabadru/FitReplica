@@ -1,5 +1,6 @@
 package com.fitreplica.core.domain.repository
 
+import com.fitreplica.core.model.ClothingId
 import kotlinx.coroutines.flow.Flow
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -27,6 +28,7 @@ data class UserPreferencesData(
     val metadataModuleEnabled: Boolean = false,
     val animationsEnabled: Boolean = true,
     val avatarConfig: AvatarConfigData = AvatarConfigData(),
+    val selectedOutfitItemIds: List<ClothingId> = emptyList(),
 )
 
 interface UserPreferencesRepository {
@@ -41,4 +43,6 @@ interface UserPreferencesRepository {
     suspend fun setAnimationsEnabled(enabled: Boolean)
 
     suspend fun setAvatarConfig(config: AvatarConfigData)
+
+    suspend fun setSelectedOutfitItemIds(itemIds: List<ClothingId>)
 }

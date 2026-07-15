@@ -108,6 +108,28 @@ class OutfitViewModelTest {
 
             assertEquals(listOf(shoes.id, shirt.id), viewModel.uiState.value.avatarState.outfit.map { it.id })
         }
+
+    @Test
+    fun `selected closet items restore after viewmodel recreation`() =
+        runTest(dispatcher) {
+            val shirt = sampleItem(id = "shirt-1", type = ClothingType.TOP)
+            val shoes = sampleItem(id = "shoe-1", type = ClothingType.SHOES)
+            val clothingRepository = FakeClothingRepository(listOf(shirt, shoes))
+            val preferencesRepository = FakeUserPreferencesRepository()
+            val viewModel = OutfitViewModel(preferencesRepository, clothingRepository)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            viewModel.onAction(OutfitUiAction.OnItemSelectionToggled(shoes.id))
+            viewModel.onAction(OutfitUiAction.OnItemSelectionToggled(shirt.id))
+            advanceUntilIdle()
+
+            val recreatedViewModel = OutfitViewModel(preferencesRepository, clothingRepository)
+            backgroundScope.launch { recreatedViewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(listOf(shoes.id, shirt.id), recreatedViewModel.uiState.value.avatarState.outfit.map { it.id })
+        }
 }
 
 private class FakeUserPreferencesRepository(
@@ -137,6 +159,10 @@ private class FakeUserPreferencesRepository(
     override suspend fun setAvatarConfig(config: AvatarConfigData) {
         delay(writeDelayMillis)
         state.value = state.value.copy(avatarConfig = config)
+    }
+
+    override suspend fun setSelectedOutfitItemIds(itemIds: List<ClothingId>) {
+        state.value = state.value.copy(selectedOutfitItemIds = itemIds)
     }
 }
 

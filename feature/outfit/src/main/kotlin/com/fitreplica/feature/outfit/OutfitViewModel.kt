@@ -33,7 +33,6 @@ class OutfitViewModel
         clothingRepository: ClothingRepository,
     ) : ViewModel() {
         private val measurementInputs = MutableStateFlow(MeasurementInputs())
-        private val selectedItemIds = MutableStateFlow<List<ClothingId>>(emptyList())
         private val avatarConfigWriteMutex = Mutex()
         private val preferences =
             userPreferencesRepository.userPreferences.stateIn(
@@ -41,6 +40,7 @@ class OutfitViewModel
                 started = SharingStarted.WhileSubscribed(OUTFIT_STATE_STOP_TIMEOUT_MS),
                 initialValue = UserPreferencesData(),
             )
+        private val selectedItemIds = MutableStateFlow<List<ClothingId>?>(null)
 
         internal val uiState: StateFlow<OutfitUiState> =
             combine(
@@ -48,7 +48,8 @@ class OutfitViewModel
                 clothingRepository.observeItems(),
                 measurementInputs,
                 selectedItemIds,
-            ) { preferences, availableItems, inputs, selectedIds ->
+            ) { preferences, availableItems, inputs, selectedIdsOverride ->
+                val selectedIds = selectedIdsOverride ?: preferences.selectedOutfitItemIds
                 val selectedOutfit = selectedIds.toSelectedItems(availableItems)
                 val measurements = inputs.withFallback(preferences.avatarConfig)
 
@@ -82,7 +83,15 @@ class OutfitViewModel
                     onMeasurementChanged(action.field, action.value)
 
                 is OutfitUiAction.OnItemSelectionToggled ->
-                    selectedItemIds.update { current -> current.toggled(action.itemId) }
+                    onItemSelectionToggled(action.itemId)
+            }
+        }
+
+        private fun onItemSelectionToggled(itemId: ClothingId) {
+            val selected = (selectedItemIds.value ?: preferences.value.selectedOutfitItemIds).toggled(itemId)
+            selectedItemIds.value = selected
+            viewModelScope.launch {
+                userPreferencesRepository.setSelectedOutfitItemIds(selected)
             }
         }
 
