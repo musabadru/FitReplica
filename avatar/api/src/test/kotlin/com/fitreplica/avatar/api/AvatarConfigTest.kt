@@ -2,7 +2,9 @@ package com.fitreplica.avatar.api
 
 import com.fitreplica.core.model.BodyMeasurements
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AvatarConfigTest {
@@ -15,7 +17,7 @@ class AvatarConfigTest {
         assertNull(config.waistCm)
         assertNull(config.hipCm)
         assertEquals(SkinTone.MEDIUM, config.skinTone)
-        assertEquals(true, config.animationEnabled)
+        assertTrue(config.animationEnabled)
     }
 
     @Test
@@ -55,7 +57,7 @@ class AvatarConfigTest {
         assertNull(config.waistCm)
         assertEquals(PARTIAL_HIP_CM, config.hipCm)
         assertEquals(SkinTone.DARK, config.skinTone)
-        assertEquals(false, config.animationEnabled)
+        assertFalse(config.animationEnabled)
     }
 }
 

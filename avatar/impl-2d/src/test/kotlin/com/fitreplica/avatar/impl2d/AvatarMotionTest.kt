@@ -2,16 +2,18 @@ package com.fitreplica.avatar.impl2d
 
 import com.fitreplica.avatar.api.AvatarAnimationState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AvatarMotionTest {
     @Test
     fun `animation is enabled only when config and system scale both allow it`() {
-        assertEquals(true, isAvatarMotionEnabled(configAnimationEnabled = true, systemAnimatorScale = 1f))
-        assertEquals(false, isAvatarMotionEnabled(configAnimationEnabled = false, systemAnimatorScale = 1f))
-        assertEquals(false, isAvatarMotionEnabled(configAnimationEnabled = true, systemAnimatorScale = 0f))
-        assertEquals(false, isAvatarMotionEnabled(configAnimationEnabled = false, systemAnimatorScale = 0f))
+        assertTrue(isAvatarMotionEnabled(configAnimationEnabled = true, systemAnimatorScale = 1f))
+        assertFalse(isAvatarMotionEnabled(configAnimationEnabled = false, systemAnimatorScale = 1f))
+        assertFalse(isAvatarMotionEnabled(configAnimationEnabled = true, systemAnimatorScale = 0f))
+        assertFalse(isAvatarMotionEnabled(configAnimationEnabled = false, systemAnimatorScale = 0f))
     }
 
     @Test
@@ -29,4 +31,23 @@ class AvatarMotionTest {
 
         assertNotEquals(first, next)
     }
+
+    @Test
+    fun `shoe position follows scaled leg endpoint`() {
+        assertEquals(
+            COMPACT_SHOE_Y,
+            shoeTopY(avatarHeight = AVATAR_HEIGHT, silhouette = SilhouetteVariant.Compact),
+            DELTA,
+        )
+        assertEquals(
+            TALL_LEAN_SHOE_Y,
+            shoeTopY(avatarHeight = AVATAR_HEIGHT, silhouette = SilhouetteVariant.TallLean),
+            DELTA,
+        )
+    }
 }
+
+private const val AVATAR_HEIGHT = 1_000f
+private const val COMPACT_SHOE_Y = 860.2f
+private const val TALL_LEAN_SHOE_Y = 903.1f
+private const val DELTA = 0.01f

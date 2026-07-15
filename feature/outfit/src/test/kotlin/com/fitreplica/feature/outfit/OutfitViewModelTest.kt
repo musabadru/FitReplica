@@ -16,6 +16,7 @@ import com.fitreplica.core.model.Status
 import com.fitreplica.core.model.WearHistoryEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -60,6 +62,22 @@ class OutfitViewModelTest {
         }
 
     @Test
+    fun `rapid measurement edits apply to the latest avatar config`() =
+        runTest(dispatcher) {
+            val preferencesRepository = FakeUserPreferencesRepository(writeDelayMillis = WRITE_DELAY_MS)
+            val viewModel = OutfitViewModel(preferencesRepository, FakeClothingRepository())
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            advanceUntilIdle()
+
+            viewModel.onAction(OutfitUiAction.OnMeasurementChanged(MeasurementField.Chest, CHEST_INPUT))
+            viewModel.onAction(OutfitUiAction.OnMeasurementChanged(MeasurementField.Waist, WAIST_INPUT))
+            advanceUntilIdle()
+
+            assertEquals(CHEST_CM, preferencesRepository.state.value.avatarConfig.chestBustCm)
+            assertEquals(WAIST_CM, preferencesRepository.state.value.avatarConfig.waistCm)
+        }
+
+    @Test
     fun `avatar module toggle persists to preferences`() =
         runTest(dispatcher) {
             val preferencesRepository = FakeUserPreferencesRepository()
@@ -70,8 +88,8 @@ class OutfitViewModelTest {
             viewModel.onAction(OutfitUiAction.OnAvatarModuleEnabledChanged(true))
             advanceUntilIdle()
 
-            assertEquals(true, preferencesRepository.state.value.avatarModuleEnabled)
-            assertEquals(true, viewModel.uiState.value.avatarModuleEnabled)
+            assertTrue(preferencesRepository.state.value.avatarModuleEnabled)
+            assertTrue(viewModel.uiState.value.avatarModuleEnabled)
         }
 
     @Test
@@ -94,6 +112,7 @@ class OutfitViewModelTest {
 
 private class FakeUserPreferencesRepository(
     initial: UserPreferencesData = UserPreferencesData(),
+    private val writeDelayMillis: Long = 0L,
 ) : UserPreferencesRepository {
     val state = MutableStateFlow(initial)
 
@@ -116,6 +135,7 @@ private class FakeUserPreferencesRepository(
     }
 
     override suspend fun setAvatarConfig(config: AvatarConfigData) {
+        delay(writeDelayMillis)
         state.value = state.value.copy(avatarConfig = config)
     }
 }
@@ -172,3 +192,6 @@ private fun sampleItem(
 
 private const val WAIST_INPUT = "74.5"
 private const val WAIST_CM = 74.5f
+private const val CHEST_INPUT = "91"
+private const val CHEST_CM = 91f
+private const val WRITE_DELAY_MS = 1L

@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -80,11 +81,15 @@ private fun FitReplicaApp(
     twoDAvatarRenderer: AvatarRenderer,
 ) {
     val navController = rememberNavController()
-    val avatarRendererChoice by avatarRendererSelector.choice.collectAsState(AvatarRendererChoice.Disabled)
-    val avatarRenderer =
-        when (avatarRendererChoice) {
-            AvatarRendererChoice.Disabled -> fallbackAvatarRenderer
-            AvatarRendererChoice.TwoD -> twoDAvatarRenderer
+    val avatarRendererChoice = avatarRendererSelector.choice.collectAsState(AvatarRendererChoice.Disabled)
+    val avatarRendererProvider =
+        remember(avatarRendererChoice, fallbackAvatarRenderer, twoDAvatarRenderer) {
+            {
+                avatarRendererChoice.value.toAvatarRenderer(
+                    fallbackAvatarRenderer = fallbackAvatarRenderer,
+                    twoDAvatarRenderer = twoDAvatarRenderer,
+                )
+            }
         }
 
     Scaffold(
@@ -97,7 +102,7 @@ private fun FitReplicaApp(
             modifier = Modifier.padding(contentPadding),
         ) {
             closetGraph(navController)
-            outfitGraph(avatarRenderer)
+            outfitGraph(avatarRendererProvider)
             historyGraph()
             laundryGraph()
             analyticsGraph()
@@ -136,6 +141,15 @@ private fun NavHostController.navigateToTopLevelDestination(route: String) {
 
 private fun String?.isSelectedTopLevelRoute(route: String): Boolean =
     this == route || this?.substringBefore("/") == route
+
+private fun AvatarRendererChoice.toAvatarRenderer(
+    fallbackAvatarRenderer: AvatarRenderer,
+    twoDAvatarRenderer: AvatarRenderer,
+): AvatarRenderer =
+    when (this) {
+        AvatarRendererChoice.Disabled -> fallbackAvatarRenderer
+        AvatarRendererChoice.TwoD -> twoDAvatarRenderer
+    }
 
 private data class TopLevelDestination(
     val route: String,

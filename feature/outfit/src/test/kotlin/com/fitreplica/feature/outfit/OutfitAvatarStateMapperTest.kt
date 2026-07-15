@@ -4,7 +4,9 @@ import com.fitreplica.avatar.api.AvatarConfig
 import com.fitreplica.core.domain.repository.AvatarConfigData
 import com.fitreplica.core.domain.repository.UserPreferencesData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OutfitAvatarStateMapperTest {
@@ -48,10 +50,10 @@ class OutfitAvatarStateMapperTest {
 
     @Test
     fun `avatar animation uses global and avatar config preferences as an AND gate`() {
-        assertEquals(true, preferences(global = true, config = true).toAvatarState().config.animationEnabled)
-        assertEquals(false, preferences(global = true, config = false).toAvatarState().config.animationEnabled)
-        assertEquals(false, preferences(global = false, config = true).toAvatarState().config.animationEnabled)
-        assertEquals(false, preferences(global = false, config = false).toAvatarState().config.animationEnabled)
+        assertTrue(preferences(global = true, config = true).toAvatarState().config.animationEnabled)
+        assertFalse(preferences(global = true, config = false).toAvatarState().config.animationEnabled)
+        assertFalse(preferences(global = false, config = true).toAvatarState().config.animationEnabled)
+        assertFalse(preferences(global = false, config = false).toAvatarState().config.animationEnabled)
     }
 }
 

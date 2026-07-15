@@ -46,7 +46,10 @@ internal class TwoDAvatarRenderer
             val motionEnabled = isAvatarMotionEnabled(config.animationEnabled, systemAnimatorScale)
             val silhouette = remember(config) { selectSilhouette(config) }
             val layers = remember(outfit) { resolveAvatarLayers(outfit, AndroidAvatarDebugLogger) }
+            val layerColors = remember(layers) { layers.map { it.toDrawableAvatarLayer() } }
             val poseState = rememberAvatarPoseFrame(animationState, motionEnabled)
+            val bodyPath = remember { Path() }
+            val garmentPath = remember { Path() }
 
             Canvas(
                 modifier =
@@ -64,14 +67,16 @@ internal class TwoDAvatarRenderer
                     silhouette = silhouette,
                     skinTone = config.skinTone.toColor(),
                     pose = pose,
+                    path = bodyPath,
                 )
-                layers.forEach { layer ->
+                layerColors.forEach { layer ->
                     drawGarmentLayer(
                         layer = layer.layer,
-                        color = layer.item.colorPrimary.toAvatarColor(),
+                        color = layer.color,
                         centerX = centerX,
                         silhouette = silhouette,
                         pose = pose,
+                        path = garmentPath,
                     )
                 }
             }
@@ -83,6 +88,14 @@ private fun rememberAvatarPoseFrame(
     animationState: AvatarAnimationState,
     motionEnabled: Boolean,
 ): State<AvatarPoseFrame> {
+    if (!motionEnabled) {
+        return remember {
+            object : State<AvatarPoseFrame> {
+                override val value: AvatarPoseFrame = AvatarPoseFrame()
+            }
+        }
+    }
+
     val transition = rememberInfiniteTransition(label = "avatarPose")
     val progress =
         transition.animateFloat(
@@ -95,17 +108,11 @@ private fun rememberAvatarPoseFrame(
             label = "avatarPoseProgress",
         )
     val latestAnimationState = rememberUpdatedState(animationState)
-    val latestMotionEnabled = rememberUpdatedState(motionEnabled)
 
     return remember(progress) {
         object : State<AvatarPoseFrame> {
             override val value: AvatarPoseFrame
-                get() =
-                    if (latestMotionEnabled.value) {
-                        poseFrameFor(latestAnimationState.value, progress.value)
-                    } else {
-                        AvatarPoseFrame()
-                    }
+                get() = poseFrameFor(latestAnimationState.value, progress.value)
         }
     }
 }
@@ -115,6 +122,7 @@ private fun DrawScope.drawBody(
     silhouette: SilhouetteVariant,
     skinTone: Color,
     pose: AvatarPoseFrame,
+    path: Path,
 ) {
     val headRadius = size.width * 0.09f
     drawCircle(
@@ -130,17 +138,16 @@ private fun DrawScope.drawBody(
     val torsoBottom = size.height * 0.55f
 
     rotate(degrees = pose.shoulderTiltDegrees, pivot = Offset(centerX, torsoTop)) {
+        path.reset()
+        path.moveTo(centerX - shoulderWidth / 2f, torsoTop)
+        path.lineTo(centerX + shoulderWidth / 2f, torsoTop)
+        path.lineTo(centerX + waistWidth / 2f, size.height * 0.42f)
+        path.lineTo(centerX + hipWidth / 2f, torsoBottom)
+        path.lineTo(centerX - hipWidth / 2f, torsoBottom)
+        path.lineTo(centerX - waistWidth / 2f, size.height * 0.42f)
+        path.close()
         drawPath(
-            path =
-                Path().apply {
-                    moveTo(centerX - shoulderWidth / 2f, torsoTop)
-                    lineTo(centerX + shoulderWidth / 2f, torsoTop)
-                    lineTo(centerX + waistWidth / 2f, size.height * 0.42f)
-                    lineTo(centerX + hipWidth / 2f, torsoBottom)
-                    lineTo(centerX - hipWidth / 2f, torsoBottom)
-                    lineTo(centerX - waistWidth / 2f, size.height * 0.42f)
-                    close()
-                },
+            path = path,
             color = skinTone,
         )
     }
@@ -175,6 +182,7 @@ private fun DrawScope.drawGarmentLayer(
     centerX: Float,
     silhouette: SilhouetteVariant,
     pose: AvatarPoseFrame,
+    path: Path,
 ) {
     when (layer) {
         AvatarLayer.Body -> Unit
@@ -187,6 +195,7 @@ private fun DrawScope.drawGarmentLayer(
                 shoulderScale = silhouette.shoulderScale,
                 hipScale = silhouette.waistScale,
                 pose = pose,
+                path = path,
             )
         AvatarLayer.Mid ->
             drawTorsoGarment(
@@ -197,6 +206,7 @@ private fun DrawScope.drawGarmentLayer(
                 shoulderScale = silhouette.waistScale,
                 hipScale = silhouette.hipScale,
                 pose = pose,
+                path = path,
             )
         AvatarLayer.Outer ->
             drawTorsoGarment(
@@ -207,9 +217,10 @@ private fun DrawScope.drawGarmentLayer(
                 shoulderScale = silhouette.shoulderScale * 1.08f,
                 hipScale = silhouette.hipScale * 1.08f,
                 pose = pose,
+                path = path,
             )
         AvatarLayer.Shoes -> {
-            val shoeY = size.height * 0.89f * silhouette.heightScale.coerceAtMost(1.05f)
+            val shoeY = shoeTopY(size.height, silhouette)
             drawOval(
                 color = color,
                 topLeft = Offset(centerX - size.width * 0.15f, shoeY),
@@ -232,23 +243,39 @@ private fun DrawScope.drawTorsoGarment(
     shoulderScale: Float,
     hipScale: Float,
     pose: AvatarPoseFrame,
+    path: Path,
 ) {
     val shoulderWidth = size.width * 0.42f * shoulderScale
     val hipWidth = size.width * 0.32f * hipScale
     rotate(degrees = pose.shoulderTiltDegrees, pivot = Offset(centerX, top)) {
+        path.reset()
+        path.moveTo(centerX - shoulderWidth / 2f, top)
+        path.lineTo(centerX + shoulderWidth / 2f, top)
+        path.lineTo(centerX + hipWidth / 2f, bottom)
+        path.lineTo(centerX - hipWidth / 2f, bottom)
+        path.close()
         drawPath(
-            path =
-                Path().apply {
-                    moveTo(centerX - shoulderWidth / 2f, top)
-                    lineTo(centerX + shoulderWidth / 2f, top)
-                    lineTo(centerX + hipWidth / 2f, bottom)
-                    lineTo(centerX - hipWidth / 2f, bottom)
-                    close()
-                },
+            path = path,
             color = color,
         )
     }
 }
+
+internal fun shoeTopY(
+    avatarHeight: Float,
+    silhouette: SilhouetteVariant,
+): Float = avatarHeight * 0.55f + avatarHeight * 0.33f * silhouette.heightScale
+
+private data class DrawableAvatarLayer(
+    val layer: AvatarLayer,
+    val color: Color,
+)
+
+private fun ResolvedAvatarLayer.toDrawableAvatarLayer(): DrawableAvatarLayer =
+    DrawableAvatarLayer(
+        layer = layer,
+        color = item.colorPrimary.toAvatarColor(),
+    )
 
 private fun android.content.Context.systemAnimatorScale(): Float =
     Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
