@@ -2,6 +2,7 @@ package com.fitreplica.core.datastore
 
 import androidx.datastore.core.DataStore
 import com.fitreplica.core.domain.repository.AvatarConfigData
+import com.fitreplica.core.model.ClothingId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -49,5 +50,16 @@ class UserPreferencesRepositoryImplTest {
             repository.setAvatarConfig(config)
 
             assertEquals(config, repository.userPreferences.first().avatarConfig)
+        }
+
+    @Test
+    fun `selected outfit item ids round-trip through the proto`() =
+        runTest {
+            val repository = UserPreferencesRepositoryImpl(FakeDataStore(UserPreferences.getDefaultInstance()))
+            val itemIds = listOf(ClothingId("shoe-1"), ClothingId("shirt-1"))
+
+            repository.setSelectedOutfitItemIds(itemIds)
+
+            assertEquals(itemIds, repository.userPreferences.first().selectedOutfitItemIds)
         }
 }

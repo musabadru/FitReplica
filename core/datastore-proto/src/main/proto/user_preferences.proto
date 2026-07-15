@@ -24,4 +24,5 @@ message UserPreferences {
   bool avatar_module_enabled = 3;
   bool metadata_module_enabled = 4;
   AvatarConfigProto avatar_config = 5;
+  repeated string selected_outfit_item_ids = 6;
 }

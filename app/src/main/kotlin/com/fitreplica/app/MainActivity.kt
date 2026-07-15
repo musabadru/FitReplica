@@ -19,7 +19,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -28,6 +30,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.fitreplica.app.avatar.AvatarRendererChoice
+import com.fitreplica.app.avatar.AvatarRendererSelector
+import com.fitreplica.avatar.api.AvatarFallbackRenderer
+import com.fitreplica.avatar.api.AvatarRenderer
+import com.fitreplica.avatar.api.AvatarTwoDRenderer
 import com.fitreplica.core.designsystem.theme.FitReplicaTheme
 import com.fitreplica.feature.analytics.ANALYTICS_ROUTE
 import com.fitreplica.feature.analytics.analyticsGraph
@@ -40,23 +47,51 @@ import com.fitreplica.feature.laundry.laundryGraph
 import com.fitreplica.feature.outfit.OUTFIT_ROUTE
 import com.fitreplica.feature.outfit.outfitGraph
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var avatarRendererSelector: AvatarRendererSelector
+
+    @AvatarFallbackRenderer
+    @Inject lateinit var fallbackAvatarRenderer: AvatarRenderer
+
+    @AvatarTwoDRenderer
+    @Inject lateinit var twoDAvatarRenderer: AvatarRenderer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             FitReplicaTheme {
-                FitReplicaApp()
+                FitReplicaApp(
+                    avatarRendererSelector = avatarRendererSelector,
+                    fallbackAvatarRenderer = fallbackAvatarRenderer,
+                    twoDAvatarRenderer = twoDAvatarRenderer,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FitReplicaApp() {
+private fun FitReplicaApp(
+    avatarRendererSelector: AvatarRendererSelector,
+    fallbackAvatarRenderer: AvatarRenderer,
+    twoDAvatarRenderer: AvatarRenderer,
+) {
     val navController = rememberNavController()
+    val avatarRendererChoice = avatarRendererSelector.choice.collectAsState(AvatarRendererChoice.Disabled)
+    val avatarRendererProvider =
+        remember(avatarRendererChoice, fallbackAvatarRenderer, twoDAvatarRenderer) {
+            {
+                avatarRendererChoice.value.toAvatarRenderer(
+                    fallbackAvatarRenderer = fallbackAvatarRenderer,
+                    twoDAvatarRenderer = twoDAvatarRenderer,
+                )
+            }
+        }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = { FitReplicaBottomNavigation(navController = navController) },
@@ -67,7 +102,7 @@ private fun FitReplicaApp() {
             modifier = Modifier.padding(contentPadding),
         ) {
             closetGraph(navController)
-            outfitGraph()
+            outfitGraph(avatarRendererProvider)
             historyGraph()
             laundryGraph()
             analyticsGraph()
@@ -106,6 +141,15 @@ private fun NavHostController.navigateToTopLevelDestination(route: String) {
 
 private fun String?.isSelectedTopLevelRoute(route: String): Boolean =
     this == route || this?.substringBefore("/") == route
+
+private fun AvatarRendererChoice.toAvatarRenderer(
+    fallbackAvatarRenderer: AvatarRenderer,
+    twoDAvatarRenderer: AvatarRenderer,
+): AvatarRenderer =
+    when (this) {
+        AvatarRendererChoice.Disabled -> fallbackAvatarRenderer
+        AvatarRendererChoice.TwoD -> twoDAvatarRenderer
+    }
 
 private data class TopLevelDestination(
     val route: String,
